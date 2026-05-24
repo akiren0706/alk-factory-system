@@ -266,16 +266,22 @@ if not df_stop.empty:
         )
         if not reason_df.empty:
             reason_df["val"] = reason_df["duration_minutes"] / divisor
+            reason_df["label"] = reason_df["reason"].str.split("/").str[0].str.strip().str[:18]
             fig2 = px.pie(
-                reason_df, names="reason", values="val",
+                reason_df, names="label", values="val",
                 color_discrete_sequence=px.colors.qualitative.Pastel,
+                hover_data={"reason": True, "label": False},
             )
             fig2.update_traces(
-                textposition="inside", textinfo="percent+label",
-                hovertemplate="%{label}<br>%{value:.1f} " + unit + "<extra></extra>",
+                textposition="inside",
+                textinfo="percent",
+                hovertemplate="<b>%{customdata[0]}</b><br>%{value:.1f} " + unit + "  (%{percent})<extra></extra>",
             )
-            apply_chart_theme(fig2, height=340, margin=dict(t=10, b=10, l=10, r=10))
-            fig2.update_layout(showlegend=False)
+            apply_chart_theme(fig2, height=340, margin=dict(t=10, b=10, l=10, r=160))
+            fig2.update_layout(
+                showlegend=True,
+                legend=dict(orientation="v", x=1.02, y=0.5, font=dict(size=11)),
+            )
             st.plotly_chart(fig2, use_container_width=True)
 
     st.divider()
@@ -298,8 +304,8 @@ if not df_stop.empty:
             labels={"factory": "工場", "停止時間": unit_label},
             title="工場別 停止時間",
         )
-        apply_chart_theme(fig3, height=280)
-        fig3.update_layout(coloraxis_showscale=False)
+        apply_chart_theme(fig3, height=280, margin=dict(t=40, b=10, l=100, r=10))
+        fig3.update_layout(coloraxis_showscale=False, yaxis=dict(tickfont=dict(size=12)))
         st.plotly_chart(fig3, use_container_width=True)
 
     with col_fc2:
@@ -310,8 +316,8 @@ if not df_stop.empty:
             labels={"factory": "工場", "件数": "停止件数"},
             title="工場別 停止件数",
         )
-        apply_chart_theme(fig4, height=280)
-        fig4.update_layout(coloraxis_showscale=False)
+        apply_chart_theme(fig4, height=280, margin=dict(t=40, b=10, l=100, r=10))
+        fig4.update_layout(coloraxis_showscale=False, yaxis=dict(tickfont=dict(size=12)))
         st.plotly_chart(fig4, use_container_width=True)
 
     # 停止カレンダー（今月）
