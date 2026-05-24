@@ -14,7 +14,7 @@ from utils.ui_helpers import (
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 
-st.set_page_config(page_title="週報", page_icon="📋", layout="wide")
+st.set_page_config(page_title="週次レポート", page_icon="📋", layout="wide")
 page_setup()
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
