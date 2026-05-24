@@ -81,9 +81,18 @@ html, body, .main, [data-testid="stAppViewContainer"] {{
   border-bottom: none !important;
   height: 2.2rem !important;
   min-height: 2.2rem !important;
+  max-height: 2.2rem !important;
 }}
 [data-testid="stDecoration"] {{
   display: none !important;
+}}
+/* ヘッダー縮小後もコンテンツ領域が余白を保持するのを解消 */
+section[data-testid="stAppViewContainer"] {{
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}}
+[data-testid="stAppViewContainer"] > .main {{
+  padding-top: 0 !important;
 }}
 
 /* ── サイドバー ── */
