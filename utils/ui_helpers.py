@@ -854,6 +854,22 @@ def inject_animations():
     var _ctObs = new MutationObserver(function() {{ setTimeout(runCountUp, 100); }});
     _ctObs.observe(doc.body, {{childList: true, subtree: true}});
 
+    /* ── メトリクス値の文字色を統一（Streamlit inline style を上書き） ── */
+    var _PRIMARY = '{PRIMARY}';
+    function fixMetricColors() {{
+      doc.querySelectorAll('[data-testid="stMetricValue"]').forEach(function(el) {{
+        el.style.setProperty('color', _PRIMARY, 'important');
+        el.querySelectorAll('*').forEach(function(c) {{
+          c.style.setProperty('color', _PRIMARY, 'important');
+          c.style.setProperty('font-weight', '700', 'important');
+        }});
+      }});
+    }}
+    setTimeout(fixMetricColors, 500);
+    setTimeout(fixMetricColors, 1100);
+    new MutationObserver(function() {{ setTimeout(fixMetricColors, 150); }})
+      .observe(doc.body, {{childList: true, subtree: true}});
+
   }} catch(e) {{ console.warn('alk-anim:', e); }}
 }})();
 </script>""", height=0, scrolling=False)
