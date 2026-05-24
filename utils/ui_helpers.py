@@ -137,7 +137,9 @@ p,span,li,td,th,label,div {{ color: {TEXT}; }}
   letter-spacing: 0.03em !important;
   color: {TEXT_SUB} !important;
 }}
-[data-testid="stMetricValue"] {{
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] > div,
+[data-testid="stMetricValue"] > div > div {{
   font-size: 2rem !important;
   font-weight: 700 !important;
   color: {PRIMARY} !important;
@@ -802,28 +804,46 @@ def inject_animations():
     _fiObs.observe(doc.body, {{childList: true, subtree: true}});
 
     /* ③ 数値カウントアップ */
-    function countUp(el) {{
-      var raw = (el.innerText || '').trim();
-      /* 日付・スラッシュ区切り・範囲・テキスト主体の値はスキップ */
-      if (raw.indexOf('/') >= 0) return;
-      if (raw.indexOf('〜') >= 0 || raw.indexOf('～') >= 0) return;
-      if (raw === '－' || raw === '―' || raw === 'ー' || raw === '-') return;
-      if (!/^[0-9]/.test(raw)) return;
-      var num = parseFloat(raw.replace(/[,\\s%]/g, ''));
-      if (isNaN(num) || num === 0) return;
-      var sfx = raw.replace(/[\\d.,]/g, '').trim();
-      var isInt = Math.abs(num - Math.round(num)) < 0.005;
+    function animCount(el, num, suffix, isInt, dur) {{
       var step = 0, tot = 50;
       el.setAttribute('data-alk-ct', '1');
       var t = setInterval(function() {{
         step++;
         var cur = num * step / tot;
-        el.innerText = (isInt ? Math.round(cur).toLocaleString() : cur.toFixed(1)) + sfx;
+        el.innerText = (isInt ? Math.round(cur).toLocaleString() : cur.toFixed(1)) + suffix;
         if (step >= tot) {{
-          el.innerText = (isInt ? Math.round(num).toLocaleString() : num.toFixed(1)) + sfx;
+          el.innerText = (isInt ? Math.round(num).toLocaleString() : num.toFixed(1)) + suffix;
           clearInterval(t);
         }}
-      }}, 900 / tot);
+      }}, (dur || 900) / tot);
+    }}
+    function countUp(el) {{
+      var raw = (el.innerText || '').trim();
+
+      /* ── "X / Y 単位" 比率パターン（"6 / 5", "160 / 192 件" など） ── */
+      if (raw.indexOf(' / ') >= 0) {{
+        var parts = raw.split(' / ');
+        var xNum = parseFloat(parts[0].replace(/[,\\s]/g, ''));
+        if (!isNaN(xNum) && xNum >= 0) {{
+          var tail = ' / ' + parts.slice(1).join(' / ');
+          animCount(el, xNum, tail, true, 700);
+          return;
+        }}
+        return;  /* 解析できなければスキップ */
+      }}
+
+      /* ── 日付・テキスト主体の値はスキップ ── */
+      if (raw.indexOf('/') >= 0) return;  /* YYYY/MM/DD など */
+      if (raw.indexOf('〜') >= 0 || raw.indexOf('～') >= 0) return;
+      if (raw === '－' || raw === '―' || raw === 'ー' || raw === '-') return;
+      if (!/^[0-9]/.test(raw)) return;
+
+      /* ── 通常数値 ── */
+      var num = parseFloat(raw.replace(/[,\\s%]/g, ''));
+      if (isNaN(num) || num === 0) return;
+      var sfx = raw.replace(/[\\d.,]/g, '').trim();
+      var isInt = Math.abs(num - Math.round(num)) < 0.005;
+      animCount(el, num, sfx, isInt, 900);
     }}
     function runCountUp() {{
       doc.querySelectorAll('[data-testid="stMetricValue"]:not([data-alk-ct])').forEach(countUp);
