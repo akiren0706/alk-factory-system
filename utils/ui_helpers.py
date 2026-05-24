@@ -795,6 +795,11 @@ def inject_animations():
     /* ③ 数値カウントアップ */
     function countUp(el) {{
       var raw = (el.innerText || '').trim();
+      // 日付・範囲・工場名など数値でない値はスキップ
+      if (raw.indexOf('/') >= 0) return;
+      if (raw.indexOf('〜') >= 0 || raw.indexOf('～') >= 0) return;  // 〜 ～
+      if (raw.indexOf('−') >= 0 || raw === '―' || raw === 'ー') return;  // － ― ー
+      if (!/^\\d/.test(raw)) return;
       var num = parseFloat(raw.replace(/[,\\s%]/g, ''));
       if (isNaN(num) || num === 0) return;
       var sfx = raw.replace(/[\\d.,]/g, '').trim();
@@ -811,9 +816,14 @@ def inject_animations():
         }}
       }}, 900 / tot);
     }}
-    setTimeout(function() {{
+    function runCountUp() {{
       doc.querySelectorAll('[data-testid="stMetricValue"]:not([data-alk-ct])').forEach(countUp);
-    }}, 420);
+    }}
+    setTimeout(runCountUp, 420);
+    // Streamlit の再レンダリング後にも動くよう監視
+    new MutationObserver(function() {{
+      setTimeout(runCountUp, 80);
+    }}).observe(doc.body, {{childList: true, subtree: true}});
 
   }} catch(e) {{ console.warn('alk-anim:', e); }}
 }})();
