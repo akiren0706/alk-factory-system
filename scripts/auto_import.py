@@ -43,10 +43,11 @@ EMAIL_ADDRESS = _email_cfg.get("address", "")
 EMAIL_PASS    = _email_cfg.get("password", "")
 TARGET_SENDER = _email_cfg.get("target_sender", "1c_alk@rfpgroup.ru")
 
-WATCH_DIR   = Path(r"C:\Users\r-akiyama\Desktop\１C生産データ")
-STATUS_FILE = BASE / "data" / "auto_import_status.json"
-LOG_FILE    = BASE / "logs" / "auto_import.log"
-POLL_SECONDS = 60
+WATCH_DIR        = Path(r"C:\Users\r-akiyama\Desktop\１C生産データ")
+UNIMPORTED_DIR   = WATCH_DIR / "未取込み"   # ダウンロード直後の一時置き場
+STATUS_FILE      = BASE / "data" / "auto_import_status.json"
+LOG_FILE         = BASE / "logs" / "auto_import.log"
+POLL_SECONDS     = 60
 
 # ── アラートメール設定（空欄なら送信しない） ──────────────────
 ALERT_EMAIL_TO        = ""
@@ -237,14 +238,15 @@ def _check_imap() -> list[Path]:
                     continue
 
                 stem = Path(fname).stem
-                new_name = _clean(f"{date_str}_{stem}.xlsx")
-                dest = WATCH_DIR / new_name
+                new_name = _clean(f"未取込み_{date_str}_{stem}.xlsx")
+                UNIMPORTED_DIR.mkdir(parents=True, exist_ok=True)
+                dest = UNIMPORTED_DIR / new_name
                 if dest.exists():
                     log.debug(f"  スキップ（既存）: {new_name}")
                     continue
 
                 dest.write_bytes(part.get_payload(decode=True))
-                log.info(f"  IMAP受信 → 保存: {new_name}  (件名: {msg.get('Subject', '')})")
+                log.info(f"  IMAP受信 → 未取込みフォルダへ保存: {new_name}  (件名: {msg.get('Subject', '')})")
                 downloaded.append(dest)
                 saved = True
 
@@ -335,12 +337,13 @@ def _check_outlook_com() -> list[Path]:
                     if not fname.lower().endswith(".xlsx"):
                         continue
                     stem = Path(fname).stem
-                    new_name = _clean(f"{date_str}_{stem}.xlsx")
-                    dest = WATCH_DIR / new_name
+                    new_name = _clean(f"未取込み_{date_str}_{stem}.xlsx")
+                    UNIMPORTED_DIR.mkdir(parents=True, exist_ok=True)
+                    dest = UNIMPORTED_DIR / new_name
                     if dest.exists():
                         continue
                     att.SaveAsFile(str(dest))
-                    log.info(f"  COM受信 → 保存: {new_name}")
+                    log.info(f"  COM受信 → 未取込みフォルダへ保存: {new_name}")
                     downloaded.append(dest)
                 except Exception as e:
                     log.warning(f"  添付保存エラー: {e}")
@@ -372,7 +375,12 @@ _MONTH_JP = {
 
 def _archive_file(path: Path) -> None:
     import shutil
-    m = re.match(r"(\d{4})-(\d{2})-\d{2}", path.name)
+    # 「未取込み_YYYY-MM-DD_...」→「取込済み_YYYY-MM-DD_...」にリネーム
+    new_stem = re.sub(r"^未取込み_", "取込済み_", path.stem)
+    new_name = new_stem + path.suffix
+
+    # 年月フォルダを決定（ファイル名中の日付を使用）
+    m = re.search(r"(\d{4})-(\d{2})-\d{2}", path.name)
     if m:
         year, month = int(m.group(1)), int(m.group(2))
     else:
@@ -380,13 +388,13 @@ def _archive_file(path: Path) -> None:
     month_label = f"{month:02d}_{_MONTH_JP[month]}"
     dest_dir = WATCH_DIR / str(year) / month_label
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / path.name
+    dest = dest_dir / new_name
     counter = 2
     while dest.exists():
-        dest = dest_dir / f"{path.stem}_{counter}{path.suffix}"
+        dest = dest_dir / f"{new_stem}_{counter}{path.suffix}"
         counter += 1
     shutil.move(str(path), str(dest))
-    log.info(f"  整理完了: {path.name} → {year}/{month_label}/")
+    log.info(f"  整理完了: {path.name} → {year}/{month_label}/{dest.name}")
 
 
 def _process_file(path: Path) -> tuple[int, int]:
@@ -413,25 +421,28 @@ def _process_file(path: Path) -> tuple[int, int]:
 
 def _scan_folder(processed: set, today_count: int,
                  last_import: str, last_file: str) -> tuple[int, str, str]:
-    for xlsx in sorted(WATCH_DIR.glob("*.xlsx")):
+    UNIMPORTED_DIR.mkdir(parents=True, exist_ok=True)
+    for xlsx in sorted(UNIMPORTED_DIR.glob("未取込み_*.xlsx")):
         key = f"{xlsx.name}|{xlsx.stat().st_size}"
         if key in processed:
             continue
-        log.info(f"新ファイル検出: {xlsx.name}")
+        log.info(f"未取込みファイル検出: {xlsx.name}")
         if not _is_stable(xlsx):
             log.info(f"  書き込み中のためスキップ: {xlsx.name}")
             continue
         processed.add(key)
         added, _ = _process_file(xlsx)
-        try:
-            _archive_file(xlsx)
-        except Exception as e:
-            log.warning(f"  整理エラー: {e}")
         if added > 0:
             today_count += added
             last_import = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             last_file   = xlsx.name
+            try:
+                _archive_file(xlsx)  # 成功時のみ → 取込済みフォルダへ
+            except Exception as e:
+                log.warning(f"  整理エラー: {e}")
             _notify("ALK インポート完了", f"{xlsx.name}  —  {added}件の生産指標を取り込みました")
+        else:
+            log.warning(f"  インポート失敗 → 未取込みフォルダに残します: {xlsx.name}")
     return today_count, last_import, last_file
 
 
@@ -449,21 +460,31 @@ def main() -> None:
     log.info("=" * 55)
 
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
+    UNIMPORTED_DIR.mkdir(parents=True, exist_ok=True)
 
     processed: set  = set()
     today_count: int = 0
     last_import: str = ""
     last_file:   str = ""
 
-    # 起動時: ルートの既存ファイルを整理
-    existing = list(WATCH_DIR.glob("*.xlsx"))
+    # 起動時: 未取込みフォルダの既存ファイルを処理
+    existing = list(UNIMPORTED_DIR.glob("未取込み_*.xlsx"))
     if existing:
-        log.info(f"既存ファイル {len(existing)} 件を整理中...")
+        log.info(f"未取込みフォルダに既存ファイル {len(existing)} 件 → インポート開始...")
         for xlsx in existing:
-            try:
-                _archive_file(xlsx)
-            except Exception as e:
-                log.warning(f"  整理スキップ: {xlsx.name} ({e})")
+            log.info(f"  起動時処理: {xlsx.name}")
+            added, _ = _process_file(xlsx)
+            if added > 0:
+                today_count += added
+                last_import = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                last_file   = xlsx.name
+                try:
+                    _archive_file(xlsx)
+                except Exception as e:
+                    log.warning(f"  整理スキップ: {xlsx.name} ({e})")
+                _notify("ALK インポート完了", f"{xlsx.name}  —  {added}件の生産指標を取り込みました")
+            else:
+                log.warning(f"  インポート失敗 → 未取込みフォルダに残します: {xlsx.name}")
             processed.add(f"{xlsx.name}|0")
 
     log.info("監視開始...")
