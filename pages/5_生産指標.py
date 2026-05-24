@@ -172,13 +172,14 @@ if tab_factories:
                         fig_tr = go.Figure()
                         for i, ind in enumerate(trend_df["表示名"].unique()):
                             sub = trend_df[trend_df["表示名"] == ind].copy()
+                            sub["date_str"] = pd.to_datetime(sub["date"]).dt.strftime("%m/%d")
                             col = palette[i % len(palette)]
-                            fig_tr.add_bar(x=sub["date"].astype(str), y=sub["fact_n"],
+                            fig_tr.add_bar(x=sub["date_str"], y=sub["fact_n"],
                                            name=ind, marker_color=col, opacity=0.65)
                             if len(sub) >= 3:
                                 sub["ma"] = sub["fact_n"].rolling(3, min_periods=1).mean()
                                 fig_tr.add_scatter(
-                                    x=sub["date"].astype(str), y=sub["ma"],
+                                    x=sub["date_str"], y=sub["ma"],
                                     mode="lines+markers", name=f"MA: {ind}",
                                     line=dict(color=col, width=2, dash="dot"),
                                     marker=dict(size=5), showlegend=False,
@@ -192,28 +193,35 @@ if tab_factories:
                         st.plotly_chart(fig_tr, use_container_width=True)
 
                 with ch_r:
-                    st.markdown('<div class="section-tag">計画 vs 実績 散布図（45°線 = 完全達成）</div>',
+                    st.markdown('<div class="section-tag">指標別 達成率</div>',
                                 unsafe_allow_html=True)
-                    sc_df = fac_df.dropna(subset=["fact_n", "plan_n"])
-                    sc_df = sc_df[(sc_df["fact_n"] > 0) & (sc_df["plan_n"] > 0)]
-                    if not sc_df.empty:
-                        _max = max(sc_df["plan_n"].max(), sc_df["fact_n"].max()) * 1.08
-                        fig_sc = px.scatter(
-                            sc_df, x="plan_n", y="fact_n", color="表示名",
-                            hover_data={"date": True, "plan_n": ":.0f", "fact_n": ":.0f"},
-                            color_discrete_sequence=get_palette(),
-                            labels={"plan_n": "計画", "fact_n": "実績", "表示名": "指標"},
-                        )
-                        fig_sc.add_scatter(x=[0, _max], y=[0, _max], mode="lines",
-                                           name="計画＝実績",
-                                           line=dict(color="#aaa", dash="dash", width=1.5),
-                                           showlegend=True)
-                        apply_chart_theme(fig_sc, height=340,
-                                          margin=dict(t=10, b=10, l=10, r=10))
-                        fig_sc.update_layout(
-                            legend=dict(orientation="v", x=1.0, y=1.0, font=dict(size=8))
-                        )
-                        st.plotly_chart(fig_sc, use_container_width=True)
+                    ach_sum = (
+                        fac_df.groupby("表示名")
+                        .agg(plan=("plan_n", "sum"), fact=("fact_n", "sum"))
+                        .reset_index()
+                    )
+                    ach_sum = ach_sum[ach_sum["plan"] > 0].copy()
+                    ach_sum["達成率"] = (ach_sum["fact"] / ach_sum["plan"] * 100).round(1)
+                    ach_sum = ach_sum.sort_values("達成率", ascending=True)
+                    if not ach_sum.empty:
+                        bar_colors = [
+                            "#27AE60" if v >= 100 else "#F39C12" if v >= 80 else "#C0392B"
+                            for v in ach_sum["達成率"]
+                        ]
+                        fig_ach = go.Figure(go.Bar(
+                            y=ach_sum["表示名"], x=ach_sum["達成率"],
+                            orientation="h", marker_color=bar_colors,
+                            text=[f"{v:.1f}%" for v in ach_sum["達成率"]],
+                            textposition="outside", cliponaxis=False,
+                        ))
+                        fig_ach.add_vline(x=100,
+                                          line=dict(color="#555", dash="dash", width=1.5),
+                                          annotation_text=" 目標100%",
+                                          annotation_font_size=10)
+                        apply_chart_theme(fig_ach, height=340,
+                                          margin=dict(t=20, b=10, l=10, r=60))
+                        fig_ach.update_layout(xaxis_title="達成率（%）", showlegend=False)
+                        st.plotly_chart(fig_ach, use_container_width=True)
 
                 # ── 達成率ヒートマップ ─────────────────────────
                 st.markdown('<div class="section-tag">達成率ヒートマップ（指標 × 日付）</div>',
@@ -223,10 +231,14 @@ if tab_factories:
                     heat_piv = heat_df.pivot_table(
                         index="表示名", columns="date", values="ach", aggfunc="mean"
                     )
-                    heat_piv.columns = [str(c) for c in heat_piv.columns]
+                    heat_piv.columns = [
+                        pd.to_datetime(str(c)).strftime("%m/%d")
+                        for c in heat_piv.columns
+                    ]
                     z_arr   = heat_piv.values
                     txt_arr = [[f"{v:.0f}%" if pd.notna(v) else "－" for v in row]
                                for row in z_arr]
+                    cell_h  = max(50, min(80, 400 // max(len(heat_piv), 1)))
                     fig_h = go.Figure(data=go.Heatmap(
                         z=z_arr, x=list(heat_piv.columns), y=list(heat_piv.index),
                         colorscale=[
@@ -236,15 +248,16 @@ if tab_factories:
                             [1.0,  "#1A5276"],
                         ],
                         zmid=100, zmin=0, zmax=150,
-                        text=txt_arr, texttemplate="%{text}", textfont=dict(size=10),
+                        text=txt_arr, texttemplate="%{text}",
+                        textfont=dict(size=max(9, min(13, cell_h // 4))),
                         showscale=True,
                         colorbar=dict(title="達成率(%)", ticksuffix="%", len=0.8),
                     ))
-                    fig_h.update_layout(xaxis=dict(tickangle=-30, title="日付"), yaxis_title="")
+                    fig_h.update_layout(xaxis=dict(title="日付"), yaxis_title="")
                     apply_chart_theme(
                         fig_h,
-                        height=max(160, len(heat_piv) * 44 + 60),
-                        margin=dict(t=10, b=60, l=10, r=80),
+                        height=max(180, len(heat_piv) * cell_h + 60),
+                        margin=dict(t=10, b=40, l=10, r=80),
                     )
                     st.plotly_chart(fig_h, use_container_width=True)
 
