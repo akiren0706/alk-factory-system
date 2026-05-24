@@ -122,6 +122,18 @@ h2 {{ color: {ACCENT}  !important; font-weight: 700 !important; font-size: 1.25r
 h3,h4,h5,h6 {{ color: {TEXT} !important; font-weight: 600 !important; }}
 p,span,li,td,th,label,div {{ color: {TEXT}; }}
 
+/* ⑥ st.title() の h1 にグラデーションアニメーション（全ページ共通） */
+.main h1 {{
+  background: linear-gradient(135deg,
+    {PRIMARY},{SECONDARY},#5B8DB8,{ACCENT},{PRIMARY}) !important;
+  background-size: 400% 400% !important;
+  animation: headerGrad 10s ease infinite !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}}
+
 /* ── KPIメトリクス ── */
 [data-testid="stMetricContainer"] {{
   background-color: {CARD} !important;
