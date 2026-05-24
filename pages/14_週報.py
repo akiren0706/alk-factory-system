@@ -351,7 +351,7 @@ for fac in TARGET_FACTORIES:
     stop_n = len(df_f_stop)
     label = f"{icon} {fac}　｜　停止: {stop_n}件 {stop_h:.1f}h"
 
-    with st.expander(label):
+    with st.expander(label, expanded=True):
         ec1, ec2 = st.columns(2)
 
         # 生産指標 詳細テーブル
