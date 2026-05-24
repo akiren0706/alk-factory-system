@@ -130,6 +130,14 @@ p,span,li,td,th,label,div {{ color: {TEXT}; }}
   border-radius: 8px !important;
   padding: 16px 20px !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+  /* ④ ホバーエフェクト */
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
+}}
+[data-testid="stMetricContainer"]:hover {{
+  transform: translateY(-5px) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.14) !important;
+  border-color: {PRIMARY} !important;
+  border-left-color: {SECONDARY} !important;
 }}
 [data-testid="stMetricLabel"] p {{
   font-size: 0.95rem !important;
@@ -192,10 +200,23 @@ p,span,li,td,th,label,div {{ color: {TEXT}; }}
 
 /* ── ステータスドット ── */
 .pdot {{ display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0; }}
-.pdot-ok   {{ background-color: {SECONDARY}; }}
-.pdot-warn {{ background-color: {COLOR_WARN}; }}
-.pdot-err  {{ background-color: {COLOR_ERR}; }}
-.pdot-none {{ background-color: #AAAAAA; }}
+/* ② LED点滅アニメーション */
+@keyframes ledPulseOk {{
+  0%,100% {{ opacity:1; box-shadow:0 0 2px 1px {SECONDARY}; }}
+  50%     {{ opacity:0.5; box-shadow:0 0 9px 5px {SECONDARY}; }}
+}}
+@keyframes ledPulseWarn {{
+  0%,100% {{ opacity:1; box-shadow:0 0 2px 1px {COLOR_WARN}; }}
+  50%     {{ opacity:0.5; box-shadow:0 0 9px 5px {COLOR_WARN}; }}
+}}
+@keyframes ledPulseErr {{
+  0%,100% {{ opacity:1; box-shadow:0 0 2px 1px {COLOR_ERR}; }}
+  50%     {{ opacity:0.5; box-shadow:0 0 9px 5px {COLOR_ERR}; }}
+}}
+.pdot-ok   {{ background-color:{SECONDARY};  animation:ledPulseOk   2.6s ease-in-out infinite; }}
+.pdot-warn {{ background-color:{COLOR_WARN}; animation:ledPulseWarn 1.6s ease-in-out infinite; }}
+.pdot-err  {{ background-color:{COLOR_ERR};  animation:ledPulseErr  1.0s ease-in-out infinite; }}
+.pdot-none {{ background-color:#AAAAAA; }}
 
 /* ── アラートカード ── */
 .alert-ok   {{ background:rgba(64,145,108,0.07);border:1px solid {SECONDARY};border-left:3px solid {SECONDARY};border-radius:6px;padding:12px 16px;color:{TEXT}; }}
@@ -351,6 +372,40 @@ hr, [data-testid="stDivider"] {{
   border: 1px solid {BORDER} !important;
   border-radius: 8px !important;
 }}
+
+/* ① フェードイン＆スライドアップ */
+@keyframes fadeInUp {{
+  from {{ opacity:0; transform:translateY(22px); }}
+  to   {{ opacity:1; transform:translateY(0);   }}
+}}
+.fade-up {{ opacity:0; }}
+.fade-up.in-view {{ animation:fadeInUp 0.50s cubic-bezier(0.22,0.61,0.36,1) both; }}
+.main .block-container > div {{
+  animation: fadeInUp 0.40s cubic-bezier(0.22,0.61,0.36,1) both;
+}}
+.main .block-container > div:nth-child(2)  {{ animation-delay:0.05s; }}
+.main .block-container > div:nth-child(3)  {{ animation-delay:0.10s; }}
+.main .block-container > div:nth-child(4)  {{ animation-delay:0.15s; }}
+.main .block-container > div:nth-child(n+5){{ animation-delay:0.20s; }}
+
+/* ⑤ 達成率バーが伸びるアニメーション */
+@keyframes barGrow {{
+  from {{ width:0 !important; }}
+}}
+.pb-fill {{ animation:barGrow 0.95s cubic-bezier(0.22,0.61,0.36,1) both; }}
+
+/* ⑥ ヘッダーグラデーション */
+@keyframes headerGrad {{
+  0%   {{ background-position:0% 50%;   }}
+  50%  {{ background-position:100% 50%; }}
+  100% {{ background-position:0% 50%;   }}
+}}
+.page-header-anim {{
+  background: linear-gradient(135deg,
+    {PRIMARY},{SECONDARY},#5B8DB8,{ACCENT},{PRIMARY}) !important;
+  background-size: 400% 400% !important;
+  animation: headerGrad 10s ease infinite !important;
+}}
 </style>"""
 
 
@@ -360,6 +415,7 @@ hr, [data-testid="stDivider"] {{
 def page_setup():
     prevent_browser_translation()
     st.markdown(common_css(), unsafe_allow_html=True)
+    inject_animations()
 
 
 # ════════════════════════════════════════════════════════════
@@ -436,22 +492,25 @@ def apply_chart_theme(fig, height: int = 320, margin: dict = None):
 def page_header_html(title: str, subtitle: str = "", icon: str = "🏭",
                      right_text: str = "") -> str:
     return f"""
-<div style="
+<div class="page-header-anim" style="
   display:flex;align-items:center;justify-content:space-between;
   padding:16px 24px 14px;margin-bottom:20px;
-  background-color:{CARD};border:1px solid {BORDER};
-  border-top:3px solid {PRIMARY};border-radius:8px;
-  box-shadow:0 1px 3px rgba(0,0,0,0.06);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.12);
 ">
   <div style="display:flex;align-items:center;gap:12px">
-    <span style="font-size:2rem">{icon}</span>
+    <span style="font-size:2rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3))">{icon}</span>
     <div>
-      <div style="font-size:1.4rem;font-weight:700;color:{PRIMARY};line-height:1.2">{title}</div>
-      <div style="font-size:0.70rem;color:{TEXT_SUB};font-weight:600;letter-spacing:0.10em;
-                  text-transform:uppercase;margin-top:2px">{subtitle}</div>
+      <div style="font-size:1.4rem;font-weight:700;color:#fff;
+                  text-shadow:0 1px 4px rgba(0,0,0,0.35);line-height:1.2">{title}</div>
+      <div style="font-size:0.70rem;color:rgba(255,255,255,0.85);font-weight:600;
+                  letter-spacing:0.10em;text-transform:uppercase;margin-top:2px;
+                  text-shadow:0 1px 2px rgba(0,0,0,0.25)">{subtitle}</div>
     </div>
   </div>
-  <div style="font-size:0.82rem;color:{TEXT_SUB};font-weight:500">{right_text}</div>
+  <div style="font-size:0.82rem;color:rgba(255,255,255,0.85);font-weight:500;
+              text-shadow:0 1px 2px rgba(0,0,0,0.25)">{right_text}</div>
 </div>"""
 
 
@@ -715,12 +774,41 @@ def inject_animations():
 (function(){
   try{
     var doc=window.parent.document;
+
+    /* ① フェードイン IntersectionObserver */
     var obs=new IntersectionObserver(function(entries){
       entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('in-view');});
     },{threshold:0.06});
-    function init(){doc.querySelectorAll('.fade-up').forEach(function(el){obs.observe(el);});}
-    init();
-    new MutationObserver(function(){init();}).observe(doc.body,{childList:true,subtree:true});
+    function initFadeUp(){
+      doc.querySelectorAll('.fade-up').forEach(function(el){obs.observe(el);});
+    }
+    initFadeUp();
+    new MutationObserver(function(){initFadeUp();})
+      .observe(doc.body,{childList:true,subtree:true});
+
+    /* ③ 数値カウントアップ */
+    function countUp(el){
+      var raw=(el.innerText||'').trim();
+      var num=parseFloat(raw.replace(/[,\s%]/g,''));
+      if(isNaN(num)||num===0) return;
+      var suffix=raw.replace(/[\d.,]/g,'').trim();
+      var isInt=Number.isInteger(num);
+      var dur=850, steps=48, step=0;
+      var timer=setInterval(function(){
+        step++;
+        var cur=num*step/steps;
+        var disp=isInt?Math.round(cur).toLocaleString():cur.toFixed(1);
+        el.innerText=disp+suffix;
+        if(step>=steps){
+          el.innerText=(isInt?Math.round(num).toLocaleString():num.toFixed(1))+suffix;
+          clearInterval(timer);
+        }
+      },dur/steps);
+    }
+    setTimeout(function(){
+      doc.querySelectorAll('[data-testid="stMetricValue"]').forEach(countUp);
+    },350);
+
   }catch(e){}
 })();
 </script>""", height=0, scrolling=False)
