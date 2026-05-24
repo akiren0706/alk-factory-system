@@ -78,13 +78,10 @@ html, body, .main, [data-testid="stAppViewContainer"] {{
 /* ── トップヘッダー・ツールバー ── */
 header[data-testid="stHeader"],
 [data-testid="stHeader"] {{
-  background-color: {BG} !important;
-  border-bottom: 1px solid {BORDER} !important;
-  height: 2.5rem !important;
-  min-height: 2.5rem !important;
+  display: none !important;
 }}
 [data-testid="stToolbar"] {{
-  background-color: {BG} !important;
+  display: none !important;
 }}
 [data-testid="stDecoration"] {{
   background-image: none !important;
@@ -108,7 +105,7 @@ header[data-testid="stHeader"],
 
 /* ── コンテンツ幅 ── */
 .main .block-container {{
-  padding-top: 0.25rem !important;
+  padding-top: 0.5rem !important;
   padding-bottom: 1rem !important;
   max-width: 1280px !important;
 }}
