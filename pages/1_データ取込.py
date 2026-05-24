@@ -62,14 +62,24 @@ else:
 _col1, _col2, _col3 = st.columns(3)
 with _col1:
     if st.button("▶ 自動インポートを起動", type="primary", key="start_daemon"):
-        import subprocess
-        _start = _BASE_DIR / "scripts" / "start.bat"
-        if _start.exists():
-            subprocess.Popen(str(_start), shell=True, cwd=str(_BASE_DIR))
-            st.success("起動しました。数秒後にステータスが更新されます。")
-            st.rerun()
+        import subprocess, sys
+        _script = _BASE_DIR / "scripts" / "auto_import.py"
+        if not _script.exists():
+            st.error(f"auto_import.py が見つかりません: {_script}")
         else:
-            st.error(f"start.bat が見つかりません: {_start}")
+            try:
+                _kw = {}
+                if sys.platform == "win32":
+                    _kw["creationflags"] = subprocess.CREATE_NO_WINDOW
+                subprocess.Popen(
+                    [sys.executable, str(_script)],
+                    cwd=str(_BASE_DIR),
+                    **_kw,
+                )
+                st.success("起動しました。数秒後にステータスが更新されます。")
+                st.rerun()
+            except Exception as e:
+                st.error(f"起動に失敗しました: {e}")
 with _col2:
     if st.button("⏹ 停止", type="secondary", key="stop_daemon"):
         import subprocess
