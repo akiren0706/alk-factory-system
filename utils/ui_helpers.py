@@ -76,17 +76,25 @@ html, body, .main, [data-testid="stAppViewContainer"] {{
 }}
 
 /* ── トップヘッダー・ツールバー ── */
-header[data-testid="stHeader"],
 [data-testid="stHeader"] {{
-  display: none !important;
+  height: 0px !important;
+  min-height: 0px !important;
+  overflow: hidden !important;
+  border-bottom: none !important;
 }}
 [data-testid="stToolbar"] {{
-  display: none !important;
+  position: fixed !important;
+  top: 4px !important;
+  right: 8px !important;
+  z-index: 9999 !important;
+  background: transparent !important;
 }}
 [data-testid="stDecoration"] {{
-  background-image: none !important;
-  background-color: {PRIMARY} !important;
-  height: 3px !important;
+  display: none !important;
+}}
+.main {{
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }}
 
 /* ── サイドバー ── */
