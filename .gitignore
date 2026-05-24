@@ -1,0 +1,25 @@
+# データファイル（個人情報・工場データのため除外）
+data/
+*.csv
+*.xlsx
+*.xls
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+
+# Streamlit シークレット（認証情報のため除外）
+.streamlit/secrets.toml
+
+# システム
+.DS_Store
+Thumbs.db
+*.log
+
+# 設定（nav_orderはGitに含める）
