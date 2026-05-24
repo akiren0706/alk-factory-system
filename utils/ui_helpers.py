@@ -86,13 +86,14 @@ html, body, .main, [data-testid="stAppViewContainer"] {{
 [data-testid="stDecoration"] {{
   display: none !important;
 }}
-/* ヘッダー縮小後もコンテンツ領域が余白を保持するのを解消 */
-section[data-testid="stAppViewContainer"] {{
+/* ── トップ余白を全セレクターで除去（Streamlitバージョン差吸収） ── */
+section[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > .main,
+[data-testid="stMainBlockContainer"],
+.stMainBlockContainer {{
   padding-top: 0 !important;
   margin-top: 0 !important;
-}}
-[data-testid="stAppViewContainer"] > .main {{
-  padding-top: 0 !important;
 }}
 
 /* ── サイドバー ── */
@@ -794,6 +795,28 @@ def inject_animations():
     var tag = doc.getElementById('alk-anim-style');
     if (!tag) {{ tag = doc.createElement('style'); tag.id = 'alk-anim-style'; doc.head.appendChild(tag); }}
     tag.textContent = {css_json};
+
+    /* ── トップ余白をJSでも強制除去（CSS !importantを超えるインラインスタイル対策） ── */
+    function fixTopGap() {{
+      var targets = [
+        '[data-testid="stAppViewContainer"]',
+        '[data-testid="stMainBlockContainer"]',
+        '.stMainBlockContainer',
+        '.main',
+      ];
+      targets.forEach(function(sel) {{
+        var el = doc.querySelector(sel);
+        if (el) {{
+          el.style.setProperty('padding-top', '0', 'important');
+          el.style.setProperty('margin-top',  '0', 'important');
+        }}
+      }});
+      var bc = doc.querySelector('.block-container');
+      if (bc) bc.style.setProperty('padding-top', '0.5rem', 'important');
+    }}
+    fixTopGap();
+    setTimeout(fixTopGap, 300);
+    new MutationObserver(fixTopGap).observe(doc.body, {{childList: true, subtree: false}});
 
     /* ページ遷移時に前ページのアニメーション状態をリセット */
     doc.querySelectorAll('[data-alk-fi]').forEach(function(el) {{ el.removeAttribute('data-alk-fi'); el.style.animation = ''; }});
