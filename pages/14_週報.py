@@ -77,13 +77,24 @@ def _build_pdf_bytes(w_sun, w_sat, df_stop_w, df_op_w) -> bytes:
         from reportlab.pdfbase.ttfonts import TTFont
         import io as _io, os
 
-        # 日本語フォント（Windowsのメイリオ）
-        font_path = r"C:\Windows\Fonts\meiryo.ttc"
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont("Meiryo", font_path))
-            font_name = "Meiryo"
-        else:
-            font_name = "Helvetica"
+        # 日本語フォント検出（Windows / Linux / Streamlit Cloud 対応）
+        _font_candidates = [
+            r"C:\Windows\Fonts\meiryo.ttc",                                      # Windows: メイリオ
+            r"C:\Windows\Fonts\YuGothM.ttc",                                     # Windows: 游ゴシック
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",            # Linux: Noto CJK
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/noto-cjk/NotoSansCJKjp-Regular.otf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJKjp-Regular.otf",
+        ]
+        font_name = "Helvetica"
+        for _fp in _font_candidates:
+            if os.path.exists(_fp):
+                try:
+                    pdfmetrics.registerFont(TTFont("JpFont", _fp))
+                    font_name = "JpFont"
+                except Exception:
+                    continue
+                break
 
         buf = _io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4,
