@@ -77,7 +77,8 @@ pg = st.navigation(nav)
 
 # ─── サイドバー：ドラッグ&ドロップで順番変更 ───────────────────
 with st.sidebar:
-    with st.expander("🔀 順番"):
+    show_order = st.checkbox("🔀 順番を変更", key="show_nav_order", value=False)
+    if show_order:
         tabs = st.tabs(list(order.keys()))
         for tab, (section, names) in zip(tabs, order.items()):
             with tab:
@@ -92,25 +93,6 @@ st.markdown("""
 <style>
 /* View less/more ボタンを非表示 */
 [data-testid="stSidebarNavViewButton"] { display: none !important; }
-
-/* 順番 expander をサイドバーに馴染ませる */
-section[data-testid="stSidebar"] div[data-testid="stExpander"] {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stExpander"] details {
-    border: none !important;
-    background-color: transparent !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stExpander"] details summary {
-    background-color: rgba(255,255,255,0.05) !important;
-    border-radius: 6px !important;
-    padding: 6px 10px !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stExpander"] details summary:hover {
-    background-color: rgba(255,255,255,0.12) !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
