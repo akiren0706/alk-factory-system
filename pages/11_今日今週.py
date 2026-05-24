@@ -144,9 +144,8 @@ with tab_today:
     t_cnt  = len(df_stop_today)
     t_hrs  = df_stop_today["duration_minutes"].sum() / 60 if not df_stop_today.empty else 0
     t_fac  = df_stop_today["factory"].nunique() if not df_stop_today.empty else 0
-    latest = df_op_week["date"].max() if not df_op_week.empty else "－"
     c1.metric("生産データ工場数", f"{t_op} / {len(TARGET_FACTORIES)} 工場")
-    c2.metric("最新データ日付",   latest)
+    c2.metric("本日",             str(today))
     c3.metric("今日の停止件数",   f"{t_cnt} 件")
     c4.metric("今日の停止時間",   f"{t_hrs:.1f} 時間")
     c5.metric("停止影響工場",     f"{t_fac} / {len(TARGET_FACTORIES)} 工場")
