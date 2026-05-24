@@ -8,7 +8,7 @@ from utils.ui_helpers import (
     themed_table, page_setup, apply_chart_theme, jp_date_input,
     plan_fact_bar, animated_kpi_html,
     page_header_html, get_palette,
-    PRIMARY, COLOR_OK, COLOR_WARN, COLOR_ERR, TEXT, TEXT_SUB, CARD, BORDER,
+    PRIMARY, COLOR_OK, COLOR_WARN, COLOR_ERR, TEXT, TEXT_SUB, CARD, BORDER, jst_today
 )
 
 st.set_page_config(page_title="製品在庫", page_icon="🏪", layout="wide")
@@ -18,16 +18,16 @@ st.markdown(page_header_html(
     "製品在庫（СГП）",
     subtitle="Product Warehouse — Inventory Flow",
     icon="🏪",
-    right_text=date.today().strftime("%Y年%m月%d日"),
+    right_text=jst_today().strftime("%Y年%m月%d日"),
 ), unsafe_allow_html=True)
 
 # ── フィルター ────────────────────────────────────────────────
 with st.container(border=True):
     c1, c2 = st.columns(2)
     with c1:
-        date_from = jp_date_input("開始日", date.today().replace(day=1), "sp_from")
+        date_from = jp_date_input("開始日", jst_today().replace(day=1), "sp_from")
     with c2:
-        date_to = jp_date_input("終了日", date.today(), "sp_to")
+        date_to = jp_date_input("終了日", jst_today(), "sp_to")
 
 df = get_operative("製品在庫", str(date_from), str(date_to))
 

@@ -8,7 +8,7 @@ from utils.ui_helpers import (
     themed_table, page_setup, apply_chart_theme, jp_date_input,
     plan_fact_bar, achievement_bar, animated_kpi_html,
     page_header_html, get_palette,
-    PRIMARY, COLOR_OK, COLOR_WARN, COLOR_ERR, TEXT, TEXT_SUB,
+    PRIMARY, COLOR_OK, COLOR_WARN, COLOR_ERR, TEXT, TEXT_SUB, jst_today
 )
 
 st.set_page_config(page_title="土場", page_icon="🪨", layout="wide")
@@ -18,16 +18,16 @@ st.markdown(page_header_html(
     "土場（УПСС）",
     subtitle="Log Yard — Raw Material Flow",
     icon="🪨",
-    right_text=date.today().strftime("%Y年%m月%d日"),
+    right_text=jst_today().strftime("%Y年%m月%d日"),
 ), unsafe_allow_html=True)
 
 # ── フィルター ────────────────────────────────────────────────
 with st.container(border=True):
     c1, c2 = st.columns(2)
     with c1:
-        date_from = jp_date_input("開始日", date.today().replace(day=1), "dp_from")
+        date_from = jp_date_input("開始日", jst_today().replace(day=1), "dp_from")
     with c2:
-        date_to = jp_date_input("終了日", date.today(), "dp_to")
+        date_to = jp_date_input("終了日", jst_today(), "dp_to")
 
 df = get_operative("土場", str(date_from), str(date_to))
 

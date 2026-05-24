@@ -10,7 +10,7 @@ from utils.ui_helpers import (
     apply_chart_theme,
     plan_fact_bar, achievement_bar, gauge_chart, multi_gauge,
     calendar_heatmap, factory_status_cards_html,
-    COLOR_OK, COLOR_WARN, COLOR_ERR, PALETTE_MAIN,
+    COLOR_OK, COLOR_WARN, COLOR_ERR, PALETTE_MAIN, jst_today
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 
@@ -19,7 +19,7 @@ page_setup()
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 FICON = {"単板工場": "🪵", "製材工場": "🪚", "ペレット工場": "🌿", "合板工場": "🏗️", "簡易製材工場": "🔨"}
-today = date.today()
+today = jst_today()
 
 
 # ── 週算出（日曜始まり / 土曜終わり） ───────────────────────────

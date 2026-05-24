@@ -10,14 +10,14 @@ from utils.ui_helpers import (
     apply_chart_theme,
     plan_fact_bar, achievement_bar, gauge_chart, multi_gauge,
     calendar_heatmap, factory_status_cards_html,
-    COLOR_OK, COLOR_WARN, COLOR_ERR, PALETTE_MAIN,
+    COLOR_OK, COLOR_WARN, COLOR_ERR, PALETTE_MAIN, jst_today
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 
 st.set_page_config(page_title="メイン", page_icon="🏠", layout="wide")
 page_setup()
 
-today      = date.today()
+today      = jst_today()
 yesterday  = today - timedelta(days=1)
 week_start = today - timedelta(days=today.weekday())
 WEEKDAYS   = ["月", "火", "水", "木", "金", "土", "日"]

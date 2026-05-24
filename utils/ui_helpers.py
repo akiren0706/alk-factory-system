@@ -5,9 +5,14 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import math
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
+
+
+def jst_today() -> date:
+    """日本時間（JST=UTC+9）の今日の日付を返す"""
+    return datetime.now(timezone(timedelta(hours=9))).date()
 
 
 # ════════════════════════════════════════════════════════════
@@ -402,8 +407,13 @@ def page_setup():
 #  ユーティリティ
 # ════════════════════════════════════════════════════════════
 def jp_date_input(label: str, default: date, key: str) -> date:
+    today = jst_today()
     if key not in st.session_state:
         st.session_state[key] = default
+    elif st.session_state[key] < today and (today - st.session_state[key]).days <= 1:
+        # タイムゾーンずれで前日のままになっている場合は本日にリセット（終了日系）
+        if (today - default).days <= 1:
+            st.session_state[key] = today
     return st.date_input(label, key=key, format="YYYY/MM/DD")
 
 

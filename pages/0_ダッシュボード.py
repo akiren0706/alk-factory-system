@@ -11,7 +11,7 @@ from utils.ui_helpers import (
     jp_date_input, unit_radio, extract_stop_type, smart_period,
     plan_fact_bar, achievement_bar, gauge_chart, multi_gauge,
     calendar_heatmap, factory_status_cards_html, page_header_html,
-    COLOR_OK, COLOR_WARN, COLOR_ERR, COLOR_GOOD, PALETTE_MAIN, get_palette,
+    COLOR_OK, COLOR_WARN, COLOR_ERR, COLOR_GOOD, PALETTE_MAIN, get_palette, jst_today,
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 
@@ -24,7 +24,7 @@ st.markdown(page_header_html(
     "ALK 工場生産管理システム",
     subtitle="Factory Operations Dashboard",
     icon="🏭",
-    right_text=date.today().strftime("%Y年%m月%d日"),
+    right_text=jst_today().strftime("%Y年%m月%d日"),
 ), unsafe_allow_html=True)
 
 # ── フィルター ───────────────────────────────────────────────
@@ -33,9 +33,9 @@ with st.container(border=True):
     with col_f1:
         sel_factory = st.selectbox("工場", ["全工場"] + TARGET_FACTORIES, key="dash_factory")
     with col_f2:
-        date_from = jp_date_input("開始日", date.today().replace(day=1), "dash_from")
+        date_from = jp_date_input("開始日", jst_today().replace(day=1), "dash_from")
     with col_f3:
-        date_to = jp_date_input("終了日", date.today(), "dash_to")
+        date_to = jp_date_input("終了日", jst_today(), "dash_to")
     with col_f4:
         unit, divisor = unit_radio()
 
@@ -321,7 +321,7 @@ if not df_stop.empty:
         st.plotly_chart(fig4, use_container_width=True)
 
     # 停止カレンダー（今月）
-    today = date.today()
+    today = jst_today()
     st.markdown('<div class="section-tag">停止カレンダー（今月）</div>', unsafe_allow_html=True)
     fig_cal = calendar_heatmap(df_stop, today.year, today.month)
     st.plotly_chart(fig_cal, use_container_width=True)
@@ -336,7 +336,7 @@ st.divider()
 # ════════════════════════════════════════════════════════════
 st.markdown('<div class="section-tag">🔮 翌週 停止時間予測</div>', unsafe_allow_html=True)
 
-_df_all = get_stoppages(factory_filter, "2024-01-01", str(date.today()))
+_df_all = get_stoppages(factory_filter, "2024-01-01", str(jst_today()))
 if not _df_all.empty and len(_df_all) >= 7:
     import numpy as np
 

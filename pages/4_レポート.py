@@ -10,7 +10,7 @@ from utils.ui_helpers import (
     themed_table, page_setup, apply_chart_theme,
     jp_date_input, unit_radio, extract_stop_type, smart_period,
     calendar_heatmap, get_palette,
-    COLOR_ERR, PRIMARY, TEXT, TEXT_SUB,
+    COLOR_ERR, PRIMARY, TEXT, TEXT_SUB, jst_today
 )
 
 st.set_page_config(page_title="レポート", page_icon="📋", layout="wide")
@@ -21,9 +21,9 @@ st.title("📋 停止分析レポート")
 with st.container(border=True):
     c1, c2, c3, c4 = st.columns([3, 3, 2, 1])
     with c1:
-        date_from = jp_date_input("開始日", _date.today().replace(month=1, day=1), "rep_from")
+        date_from = jp_date_input("開始日", jst_today().replace(month=1, day=1), "rep_from")
     with c2:
-        date_to = jp_date_input("終了日", _date.today(), "rep_to")
+        date_to = jp_date_input("終了日", jst_today(), "rep_to")
     sel_factory = c3.selectbox("工場", ["全工場"] + TARGET_FACTORIES)
     with c4:
         unit, divisor = unit_radio()
@@ -335,7 +335,7 @@ with tab3:
 
     st.divider()
     st.markdown('<div class="section-tag">停止カレンダー（今月）</div>', unsafe_allow_html=True)
-    _today = _date.today()
+    _today = jst_today()
     st.plotly_chart(calendar_heatmap(df_stop, _today.year, _today.month),
                     use_container_width=True)
 

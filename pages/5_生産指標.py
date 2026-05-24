@@ -9,7 +9,7 @@ from utils.master_data import TARGET_FACTORIES, fix_indicator_name
 from utils.ui_helpers import (
     themed_table, page_setup, apply_chart_theme, jp_date_input,
     gauge_chart, get_palette,
-    COLOR_OK, COLOR_WARN, COLOR_ERR, PRIMARY, TEXT, TEXT_SUB,
+    COLOR_OK, COLOR_WARN, COLOR_ERR, PRIMARY, TEXT, TEXT_SUB, jst_today
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 
@@ -25,9 +25,9 @@ with st.expander("🔍 フィルター", expanded=True):
     c1, c2, c3 = st.columns(3)
     sel_factory = c1.selectbox("工場", ["全工場"] + ALL_FACTORIES, key="of")
     with c2:
-        date_from = jp_date_input("開始日", date.today().replace(day=1), "odf")
+        date_from = jp_date_input("開始日", jst_today().replace(day=1), "odf")
     with c3:
-        date_to = jp_date_input("終了日", date.today(), "odt")
+        date_to = jp_date_input("終了日", jst_today(), "odt")
 
 factory_filter = "" if sel_factory == "全工場" else sel_factory
 df = get_operative(factory_filter, str(date_from), str(date_to))
@@ -324,9 +324,9 @@ with st.expander("🗑️ データを削除"):
     del_fac = dc1.selectbox("工場", [""] + ALL_FACTORIES,
                             format_func=lambda v: "すべての工場" if v == "" else v, key="od_fac")
     with dc2:
-        del_from = jp_date_input("開始日", date.today().replace(day=1), "od_from")
+        del_from = jp_date_input("開始日", jst_today().replace(day=1), "od_from")
     with dc3:
-        del_to = jp_date_input("終了日", date.today(), "od_to")
+        del_to = jp_date_input("終了日", jst_today(), "od_to")
     if st.button("⚠️  条件に一致するデータを削除（取り消し不可）", type="primary", key="od_del"):
         deleted = delete_operative_bulk(del_fac, str(del_from), str(del_to))
         st.success(f"✅  {deleted} 件を削除しました。")

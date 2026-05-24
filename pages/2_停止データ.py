@@ -14,7 +14,7 @@ from utils.ui_helpers import (
     apply_chart_theme,
     jp_date_input, unit_radio, extract_stop_type, smart_period,
     COLOR_OK, COLOR_WARN, COLOR_ERR, COLOR_GOOD, PALETTE_MAIN,
-    calendar_heatmap, get_palette,
+    calendar_heatmap, get_palette, jst_today
 )
 
 st.set_page_config(page_title="停止データ", page_icon="⏸️", layout="wide")
@@ -26,9 +26,9 @@ with st.expander("🔍 フィルター", expanded=True):
     c1, c2, c3, c4, c5 = st.columns([2, 3, 3, 2, 1])
     sel_factory = c1.selectbox("工場", ["全工場"] + TARGET_FACTORIES, key="sf")
     with c2:
-        date_from = jp_date_input("開始日", date.today().replace(day=1), "sdf")
+        date_from = jp_date_input("開始日", jst_today().replace(day=1), "sdf")
     with c3:
-        date_to = jp_date_input("終了日", date.today(), "sdt")
+        date_to = jp_date_input("終了日", jst_today(), "sdt")
     keyword = c4.text_input("エリア/設備（キーワード）", key="sk")
     with c5:
         unit, divisor = unit_radio(horizontal=False)
@@ -92,7 +92,7 @@ if not df.empty:
         st.plotly_chart(fig, use_container_width=True)
 
         # カレンダーヒートマップ（今月）
-        _today = _date.today()
+        _today = jst_today()
         st.markdown('<div class="section-tag">停止カレンダー（今月）</div>', unsafe_allow_html=True)
         st.plotly_chart(
             calendar_heatmap(df, _today.year, _today.month),
@@ -245,9 +245,9 @@ else:
                                         format_func=lambda v: "すべての工場" if v == "" else v,
                                         key="del_fac")
             with bc2:
-                del_date_from = jp_date_input("開始日", date.today().replace(day=1), "del_from")
+                del_date_from = jp_date_input("開始日", jst_today().replace(day=1), "del_from")
             with bc3:
-                del_date_to = jp_date_input("終了日", date.today(), "del_to")
+                del_date_to = jp_date_input("終了日", jst_today(), "del_to")
 
             df_from_str = str(del_date_from)
             df_to_str   = str(del_date_to)

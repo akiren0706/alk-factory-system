@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date, timedelta
 from utils.data_store import get_operative
 from utils.master_data import TARGET_FACTORIES
-from utils.ui_helpers import page_setup, factory_status_cards_html, themed_table, COLOR_ERR, COLOR_WARN, COLOR_OK
+from utils.ui_helpers import page_setup, factory_status_cards_html, themed_table, COLOR_ERR, COLOR_WARN, COLOR_OK, jst_today
 
 st.set_page_config(page_title="アラート", page_icon="🚨", layout="wide")
 page_setup()
@@ -17,7 +17,7 @@ sel_factories = st.sidebar.multiselect(
 )
 
 # ── データ取得 ────────────────────────────────────────────────
-today     = date.today()
+today     = jst_today()
 date_from = date(2025, 1, 1)   # 2025年1月1日から全件チェック
 df_all = get_operative("", str(date_from), str(today))
 

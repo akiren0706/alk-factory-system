@@ -10,7 +10,7 @@ from utils.ui_helpers import (
     page_setup,
     apply_chart_theme,
     jp_date_input, plan_fact_bar, achievement_bar,
-    COLOR_OK, COLOR_WARN, COLOR_ERR, COLOR_GOOD, PALETTE_MAIN, get_palette,
+    COLOR_OK, COLOR_WARN, COLOR_ERR, COLOR_GOOD, PALETTE_MAIN, get_palette, jst_today
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 
@@ -23,9 +23,9 @@ with st.container(border=True):
     c1, c2, c3 = st.columns(3)
     sel_factory = c1.selectbox("工場", ["全工場"] + TARGET_FACTORIES, key="pf")
     with c2:
-        date_from = jp_date_input("開始日", date.today().replace(day=1), "pdf")
+        date_from = jp_date_input("開始日", jst_today().replace(day=1), "pdf")
     with c3:
-        date_to = jp_date_input("終了日", date.today(), "pdt")
+        date_to = jp_date_input("終了日", jst_today(), "pdt")
 
 factory_filter = "" if sel_factory == "全工場" else sel_factory
 df_op   = get_operative(factory_filter, str(date_from), str(date_to))
