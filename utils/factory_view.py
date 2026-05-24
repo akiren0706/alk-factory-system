@@ -16,6 +16,7 @@ from utils.ui_helpers import (
     COLOR_OK, COLOR_WARN, COLOR_ERR, PRIMARY, CARD, BORDER, TEXT, TEXT_SUB,
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
+from utils.master_data import fix_indicator_name
 
 FACTORY_ICON = {
     "単板工場":    "🪵",
@@ -268,7 +269,7 @@ def render_factory_page(factory: str):
                     _kdf = df_op.dropna(subset=["fact"]).head(10).copy()
                 if not _kdf.empty:
                     _kdf["表示名"] = _kdf.apply(
-                        lambda r: r["indicator_jp"] if r["indicator_jp"] else r["indicator_ru"][:30], axis=1
+                        lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
                     )
                     _kdf["fact"] = pd.to_numeric(_kdf["fact"], errors="coerce")
                     _kdf["plan"] = pd.to_numeric(_kdf["plan"], errors="coerce")
@@ -371,7 +372,7 @@ def render_factory_page(factory: str):
                 else:
                     _kdf2 = df_op.copy()
                 _kdf2["表示名"] = _kdf2.apply(
-                    lambda r: r["indicator_jp"] if r["indicator_jp"] else r["indicator_ru"][:28], axis=1
+                    lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
                 )
                 _kdf2["fact"] = pd.to_numeric(_kdf2["fact"], errors="coerce")
                 _kdf2["plan"] = pd.to_numeric(_kdf2["plan"], errors="coerce")
@@ -460,7 +461,7 @@ def render_factory_page(factory: str):
 
                 if not kdf.empty:
                     kdf["表示名"] = kdf.apply(
-                        lambda r: r["indicator_jp"] if r["indicator_jp"] else r["indicator_ru"][:35], axis=1
+                        lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
                     )
                     kdf["fact"] = pd.to_numeric(kdf["fact"], errors="coerce")
                     kdf["plan"] = pd.to_numeric(kdf["plan"], errors="coerce")
@@ -528,7 +529,7 @@ def render_factory_page(factory: str):
 
                 if not kdf2.empty:
                     kdf2["表示名"] = kdf2.apply(
-                        lambda r: r["indicator_jp"] if r["indicator_jp"] else r["indicator_ru"][:30], axis=1
+                        lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
                     )
                     kdf2["fact"] = pd.to_numeric(kdf2["fact"], errors="coerce")
                     kdf2["plan"] = pd.to_numeric(kdf2["plan"], errors="coerce")
@@ -628,7 +629,7 @@ def render_factory_page(factory: str):
 
             if not trend_kdf.empty:
                 trend_kdf["表示名"] = trend_kdf.apply(
-                    lambda r: r["indicator_jp"] if r["indicator_jp"] else r["indicator_ru"][:30], axis=1
+                    lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
                 )
                 trend_kdf["fact"] = pd.to_numeric(trend_kdf["fact"], errors="coerce")
                 trend_agg = (trend_kdf.groupby(["date", "表示名"])
@@ -664,8 +665,7 @@ def render_factory_page(factory: str):
                 .where(show_op["plan"] > 0)
             )
             show_op["指標"] = show_op.apply(
-                lambda r: (f"{r['indicator_jp']}  ({r['indicator_ru'][:30]})"
-                           if r["indicator_jp"] else r["indicator_ru"][:50]),
+                lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]),
                 axis=1,
             )
             themed_table(

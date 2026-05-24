@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, timedelta
 from utils.data_store import get_stoppages, get_operative
-from utils.master_data import TARGET_FACTORIES
+from utils.master_data import TARGET_FACTORIES, fix_indicator_name
 from utils.ui_helpers import (
     themed_table,
     page_setup, apply_chart_theme,
@@ -63,7 +63,7 @@ for fac in TARGET_FACTORIES:
             pct = fact_sum / plan_sum * 100 if plan_sum > 0 else None
             prod_rows.append({
                 "工場": fac, "icon": FICON.get(fac, "🏭"),
-                "指標": m.iloc[0]["indicator_jp"] or p[:20],
+                "指標": fix_indicator_name(m.iloc[0]["indicator_ru"], m.iloc[0]["indicator_jp"]),
                 "単位": m.iloc[0]["unit"],
                 "計画": plan_sum, "実績": fact_sum, "達成率": pct,
             })

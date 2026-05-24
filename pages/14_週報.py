@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import date, timedelta
 from utils.data_store import get_stoppages, get_operative
-from utils.master_data import TARGET_FACTORIES
+from utils.master_data import TARGET_FACTORIES, fix_indicator_name
 from utils.ui_helpers import (
     themed_table,
     page_setup,
@@ -204,7 +204,7 @@ else:
                 pct  = fact / plan * 100 if plan > 0 else None
                 prod_rows.append({
                     "工場": fac, "icon": FICON.get(fac, "🏭"),
-                    "指標": m.iloc[0]["indicator_jp"] or p[:20],
+                    "指標": fix_indicator_name(m.iloc[0]["indicator_ru"], m.iloc[0]["indicator_jp"]),
                     "単位": m.iloc[0]["unit"],
                     "実績": fact, "計画": plan, "達成率": pct,
                 })
@@ -367,7 +367,10 @@ for fac in TARGET_FACTORIES:
                     if not m.empty:
                         m["fact"] = pd.to_numeric(m["fact"], errors="coerce")
                         m["plan"] = pd.to_numeric(m["plan"], errors="coerce")
-                        pivot_fact = m.pivot_table(index="indicator_jp", columns="date",
+                        m["display_name"] = m.apply(
+                            lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
+                        )
+                        pivot_fact = m.pivot_table(index="display_name", columns="date",
                                                    values="fact", aggfunc="sum")
                         pivot_fact.columns = [str(c) for c in pivot_fact.columns]
                         # 週の全日付を強制表示（データなし日は NaN）
@@ -392,13 +395,13 @@ for fac in TARGET_FACTORIES:
                         themed_table(fmt_df.reset_index())
                     else:
                         # 全指標一覧を表示
-                        show_all = df_f_op[["indicator_jp", "date", "fact", "plan", "unit"]].copy()
-                        show_all.columns = ["指標", "日付", "実績", "計画", "単位"]
-                        themed_table(show_all)
+                        show_all = df_f_op[["indicator_ru", "indicator_jp", "date", "fact", "plan", "unit"]].copy()
+                        show_all["指標"] = show_all.apply(lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1)
+                        themed_table(show_all[["指標", "date", "fact", "plan", "unit"]].rename(columns={"date": "日付", "fact": "実績", "plan": "計画", "unit": "単位"}))
                 else:
-                    show_all = df_f_op[["indicator_jp", "date", "fact", "plan", "unit"]].copy()
-                    show_all.columns = ["指標", "日付", "実績", "計画", "単位"]
-                    themed_table(show_all)
+                    show_all = df_f_op[["indicator_ru", "indicator_jp", "date", "fact", "plan", "unit"]].copy()
+                    show_all["指標"] = show_all.apply(lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1)
+                    themed_table(show_all[["指標", "date", "fact", "plan", "unit"]].rename(columns={"date": "日付", "fact": "実績", "plan": "計画", "unit": "単位"}))
 
         # 停止データ
         with ec2:
