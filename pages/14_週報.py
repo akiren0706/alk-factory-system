@@ -64,6 +64,48 @@ with col_nav:
         st.session_state.weekly_ref = today - timedelta(days=days_since_sun + 7)
         st.rerun()
 
+# ── 日本語フォント取得（キャッシュ付き） ────────────────────────
+@st.cache_resource(show_spinner="フォント読み込み中...")
+def _get_jp_font_path() -> str | None:
+    """日本語フォントのパスを返す。なければダウンロードして一時保存（キャッシュ）"""
+    import os, glob, tempfile, urllib.request
+
+    # Windows パス
+    win_candidates = [
+        r"C:\Windows\Fonts\meiryo.ttc",
+        r"C:\Windows\Fonts\YuGothM.ttc",
+        r"C:\Windows\Fonts\msgothic.ttc",
+    ]
+    for p in win_candidates:
+        if os.path.exists(p):
+            return p
+
+    # Linux: glob で Noto CJK を広く検索
+    for pattern in [
+        "/usr/share/fonts/**/Noto*CJK*Regular*.ttc",
+        "/usr/share/fonts/**/Noto*CJK*Regular*.otf",
+        "/usr/share/fonts/**/NotoSans*JP*Regular*.otf",
+        "/usr/share/fonts/**/NotoSans*JP*Regular*.ttf",
+        "/usr/share/fonts/**/*gothic*.ttf",
+        "/usr/share/fonts/**/*Gothic*.ttf",
+    ]:
+        hits = glob.glob(pattern, recursive=True)
+        if hits:
+            return hits[0]
+
+    # フォールバック: NotoSansJP-Regular をダウンロード（~3MB）
+    tmp = os.path.join(tempfile.gettempdir(), "NotoSansJP-Regular.ttf")
+    if os.path.exists(tmp):
+        return tmp
+    try:
+        url = ("https://github.com/googlefonts/noto-fonts/raw/main"
+               "/hinted/ttf/NotoSansJP/NotoSansJP-Regular.ttf")
+        urllib.request.urlretrieve(url, tmp)
+        return tmp
+    except Exception:
+        return None
+
+
 # ── PDF 出力 ──────────────────────────────────────────────────
 def _build_pdf_bytes(w_sun, w_sat, df_stop_w, df_op_w) -> bytes:
     """週報をPDFバイト列で返す（reportlab使用）"""
@@ -75,26 +117,17 @@ def _build_pdf_bytes(w_sun, w_sat, df_stop_w, df_op_w) -> bytes:
         from reportlab.lib.units import mm
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
-        import io as _io, os
+        import io as _io
 
-        # 日本語フォント検出（Windows / Linux / Streamlit Cloud 対応）
-        _font_candidates = [
-            r"C:\Windows\Fonts\meiryo.ttc",                                      # Windows: メイリオ
-            r"C:\Windows\Fonts\YuGothM.ttc",                                     # Windows: 游ゴシック
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",            # Linux: Noto CJK
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/noto-cjk/NotoSansCJKjp-Regular.otf",
-            "/usr/share/fonts/opentype/noto/NotoSansCJKjp-Regular.otf",
-        ]
+        # 日本語フォント（キャッシュ済みパスを利用）
         font_name = "Helvetica"
-        for _fp in _font_candidates:
-            if os.path.exists(_fp):
-                try:
-                    pdfmetrics.registerFont(TTFont("JpFont", _fp))
-                    font_name = "JpFont"
-                except Exception:
-                    continue
-                break
+        _fp = _get_jp_font_path()
+        if _fp:
+            try:
+                pdfmetrics.registerFont(TTFont("JpFont", _fp))
+                font_name = "JpFont"
+            except Exception:
+                pass
 
         buf = _io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4,
