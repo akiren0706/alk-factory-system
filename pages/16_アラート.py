@@ -158,4 +158,7 @@ pivot = heat.pivot(index="工場", columns="日付", values="取込")
 
 # 表示用: ✅ / ❌
 display = pivot.map(lambda v: "✅" if v else "❌")
-themed_table(display)
+# 列名を "YYYY-MM-DD" → "MM/DD" に短縮（視認性向上）
+display.columns = [c[5:].replace("-", "/") for c in display.columns]
+display.index.name = "工場"
+themed_table(display, hide_index=False)
