@@ -88,4 +88,10 @@ with st.sidebar:
                     save_order(new_order)
                     st.rerun()
 
+st.markdown("""
+<style>
+[data-testid="stSidebarNavViewButton"] { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
+
 pg.run()
