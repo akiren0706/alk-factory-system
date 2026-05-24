@@ -213,6 +213,13 @@ def add_operative(records: list[dict]) -> tuple[int, int]:
         for c in OPERATIVE_COLS: r.setdefault(c, "")
         new_records.append(r); existing.add(key)
     if new_records:
+        # 数値列のNaN・空文字をNoneに統一
+        num_cols = {"plan", "fact"}
+        for r in new_records:
+            for col in num_cols:
+                v = r.get(col)
+                if v == "" or (isinstance(v, float) and v != v):  # "" or NaN
+                    r[col] = None
         chunk = 500
         for i in range(0, len(new_records), chunk):
             _sb().table("operative_data").insert(new_records[i:i+chunk]).execute()

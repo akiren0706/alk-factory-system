@@ -145,8 +145,8 @@ def _parse_daily(df, date_str, factory, unit_col, plan_col, fact_col, start_row)
             'date': date_str, 'factory': factory,
             'indicator_ru': ru, 'indicator_jp': jp,
             'unit': unit,
-            'plan': '' if plan is None else plan,
-            'fact': '' if fact is None else fact,
+            'plan': plan,
+            'fact': fact,
             'sheet_type': '日次',
         })
     return records
@@ -196,7 +196,7 @@ def _parse_eds(df, date_str, factory) -> list[dict]:
             'date': date_str, 'factory': factory,
             'indicator_ru': ru, 'indicator_jp': jp,
             'unit': unit,
-            'plan': '' if dp_val is None else dp_val * 2,  # plan × 2 shifts
+            'plan': None if dp_val is None else dp_val * 2,
             'fact': fact,
             'sheet_type': 'EDS昼夜合計',
         })
