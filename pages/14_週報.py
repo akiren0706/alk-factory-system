@@ -372,13 +372,16 @@ for fac in TARGET_FACTORIES:
                         pivot_fact.columns = [str(c) for c in pivot_fact.columns]
                         # 週の全日付を強制表示（データなし日は NaN）
                         from datetime import timedelta
+                        DAY_JP = ["日","月","火","水","木","金","土"]
                         all_dates = [str(w_sun + timedelta(days=i)) for i in range(7)]
+                        short_names = [f"{(w_sun + timedelta(days=i)).day}({DAY_JP[i]})" for i in range(7)]
                         for d in all_dates:
                             if d not in pivot_fact.columns:
                                 pivot_fact[d] = float("nan")
-                        pivot_fact = pivot_fact[sorted(all_dates)]
+                        pivot_fact = pivot_fact[all_dates]
+                        pivot_fact.columns = short_names
                         # 合計列
-                        pivot_fact["週合計"] = pivot_fact.sum(axis=1, min_count=1)
+                        pivot_fact["週計"] = pivot_fact.sum(axis=1, min_count=1)
                         # 数値を文字列フォーマットしてからthemed_tableへ渡す
                         fmt_df = pivot_fact.copy()
                         for col in fmt_df.columns:
