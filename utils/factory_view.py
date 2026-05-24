@@ -317,22 +317,27 @@ def render_factory_page(factory: str):
                 )
                 if not reason_df2.empty:
                     reason_df2["val"] = reason_df2["duration_minutes"] / divisor
+                    reason_df2["label"] = reason_df2["reason"].apply(
+                        lambda s: s[:24] + "…" if len(str(s)) > 25 else s
+                    )
                     fig_pie2 = px.pie(
-                        reason_df2, names="reason", values="val",
+                        reason_df2, names="label", values="val",
                         color_discrete_sequence=get_palette(),
                         hole=0.4,
                         title="停止理由 内訳",
+                        hover_data={"reason": True, "label": False},
                     )
                     fig_pie2.update_traces(
                         textposition="inside", textinfo="percent",
                         textfont=dict(size=10),
+                        hovertemplate="<b>%{customdata[0]}</b><br>%{value:.1f} " + unit + "  (%{percent})<extra></extra>",
                     )
                     apply_chart_theme(fig_pie2, height=260,
-                                      margin=dict(t=36, b=5, l=5, r=5))
+                                      margin=dict(t=36, b=5, l=5, r=160))
                     fig_pie2.update_layout(
                         showlegend=True,
-                        legend=dict(orientation="v", x=1.0, y=0.5,
-                                    font=dict(size=9, color=TEXT)),
+                        legend=dict(orientation="v", x=1.02, y=0.5,
+                                    font=dict(size=8, color=TEXT)),
                     )
                     st.plotly_chart(fig_pie2, use_container_width=True)
                 else:
@@ -492,21 +497,26 @@ def render_factory_page(factory: str):
                 )
                 if not reason_df.empty:
                     reason_df["val"] = reason_df["duration_minutes"] / divisor
+                    reason_df["label"] = reason_df["reason"].apply(
+                        lambda s: s[:24] + "…" if len(str(s)) > 25 else s
+                    )
                     fig_p = px.pie(
-                        reason_df, names="reason", values="val",
+                        reason_df, names="label", values="val",
                         color_discrete_sequence=get_palette(),
                         hole=0.38,
+                        hover_data={"reason": True, "label": False},
                     )
                     fig_p.update_traces(
                         textposition="inside", textinfo="percent",
                         textfont=dict(size=11),
+                        hovertemplate="<b>%{customdata[0]}</b><br>%{value:.1f} " + unit + "  (%{percent})<extra></extra>",
                     )
-                    apply_chart_theme(fig_p, height=320, margin=dict(t=10, b=10, l=10, r=120))
+                    apply_chart_theme(fig_p, height=320, margin=dict(t=10, b=10, l=10, r=160))
                     fig_p.update_layout(
                         showlegend=True,
                         legend=dict(
-                            orientation="v", x=1.0, y=0.5,
-                            font=dict(size=10, color=TEXT),
+                            orientation="v", x=1.02, y=0.5,
+                            font=dict(size=9, color=TEXT),
                         ),
                     )
                     st.plotly_chart(fig_p, use_container_width=True)
