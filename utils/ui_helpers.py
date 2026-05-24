@@ -869,6 +869,7 @@ def inject_animations():
 
       /* ── 日付・テキスト主体の値はスキップ ── */
       if (raw.indexOf('/') >= 0) return;  /* YYYY/MM/DD など */
+      if (/\\d-\\d/.test(raw)) return;     /* YYYY-MM-DD など */
       if (raw.indexOf('〜') >= 0 || raw.indexOf('～') >= 0) return;
       if (raw === '－' || raw === '―' || raw === 'ー' || raw === '-') return;
       if (!/^[0-9]/.test(raw)) return;
