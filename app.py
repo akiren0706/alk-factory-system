@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 from pathlib import Path
-from streamlit_sortables import sort_items
 
 BASE = Path(__file__).parent
 
@@ -75,19 +74,6 @@ order = load_order()
 nav = build_nav(order)
 pg = st.navigation(nav)
 
-# ─── サイドバー：ドラッグ&ドロップで順番変更 ───────────────────
-with st.sidebar:
-    show_order = st.checkbox("🔀 順番を変更", key="show_nav_order", value=False)
-    if show_order:
-        tabs = st.tabs(list(order.keys()))
-        for tab, (section, names) in zip(tabs, order.items()):
-            with tab:
-                result = sort_items(names, multi_containers=False, key=f"ns_{section}")
-                if result != names:
-                    new_order = dict(order)
-                    new_order[section] = result
-                    save_order(new_order)
-                    st.rerun()
 
 st.markdown("""
 <style>
