@@ -80,6 +80,8 @@ header[data-testid="stHeader"],
 [data-testid="stHeader"] {{
   background-color: {BG} !important;
   border-bottom: 1px solid {BORDER} !important;
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
 }}
 [data-testid="stToolbar"] {{
   background-color: {BG} !important;
@@ -106,7 +108,8 @@ header[data-testid="stHeader"],
 
 /* ── コンテンツ幅 ── */
 .main .block-container {{
-  padding-top: 0.75rem !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 1rem !important;
   max-width: 1280px !important;
 }}
 
