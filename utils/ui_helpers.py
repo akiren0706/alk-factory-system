@@ -130,14 +130,6 @@ p,span,li,td,th,label,div {{ color: {TEXT}; }}
   border-radius: 8px !important;
   padding: 16px 20px !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-  /* ④ ホバーエフェクト */
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
-}}
-[data-testid="stMetricContainer"]:hover {{
-  transform: translateY(-5px) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.14) !important;
-  border-color: {PRIMARY} !important;
-  border-left-color: {SECONDARY} !important;
 }}
 [data-testid="stMetricLabel"] p {{
   font-size: 0.95rem !important;
@@ -200,22 +192,9 @@ p,span,li,td,th,label,div {{ color: {TEXT}; }}
 
 /* ── ステータスドット ── */
 .pdot {{ display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0; }}
-/* ② LED点滅アニメーション */
-@keyframes ledPulseOk {{
-  0%,100% {{ opacity:1; box-shadow:0 0 2px 1px {SECONDARY}; }}
-  50%     {{ opacity:0.5; box-shadow:0 0 9px 5px {SECONDARY}; }}
-}}
-@keyframes ledPulseWarn {{
-  0%,100% {{ opacity:1; box-shadow:0 0 2px 1px {COLOR_WARN}; }}
-  50%     {{ opacity:0.5; box-shadow:0 0 9px 5px {COLOR_WARN}; }}
-}}
-@keyframes ledPulseErr {{
-  0%,100% {{ opacity:1; box-shadow:0 0 2px 1px {COLOR_ERR}; }}
-  50%     {{ opacity:0.5; box-shadow:0 0 9px 5px {COLOR_ERR}; }}
-}}
-.pdot-ok   {{ background-color:{SECONDARY};  animation:ledPulseOk   2.6s ease-in-out infinite; }}
-.pdot-warn {{ background-color:{COLOR_WARN}; animation:ledPulseWarn 1.6s ease-in-out infinite; }}
-.pdot-err  {{ background-color:{COLOR_ERR};  animation:ledPulseErr  1.0s ease-in-out infinite; }}
+.pdot-ok   {{ background-color:{SECONDARY}; }}
+.pdot-warn {{ background-color:{COLOR_WARN}; }}
+.pdot-err  {{ background-color:{COLOR_ERR}; }}
 .pdot-none {{ background-color:#AAAAAA; }}
 
 /* ── アラートカード ── */
@@ -373,26 +352,12 @@ hr, [data-testid="stDivider"] {{
   border-radius: 8px !important;
 }}
 
-/* ① フェードイン＆スライドアップ */
-@keyframes fadeInUp {{
-  from {{ opacity:0; transform:translateY(22px); }}
-  to   {{ opacity:1; transform:translateY(0);   }}
-}}
-.fade-up {{ opacity:0; }}
-.fade-up.in-view {{ animation:fadeInUp 0.50s cubic-bezier(0.22,0.61,0.36,1) both; }}
-.main .block-container > div {{
-  animation: fadeInUp 0.40s cubic-bezier(0.22,0.61,0.36,1) both;
-}}
-.main .block-container > div:nth-child(2)  {{ animation-delay:0.05s; }}
-.main .block-container > div:nth-child(3)  {{ animation-delay:0.10s; }}
-.main .block-container > div:nth-child(4)  {{ animation-delay:0.15s; }}
-.main .block-container > div:nth-child(n+5){{ animation-delay:0.20s; }}
-
-/* ⑤ 達成率バーが伸びるアニメーション */
+/* ⑤ 達成率バー（transform使用 — inlineスタイルと競合しない） */
 @keyframes barGrow {{
-  from {{ width:0 !important; }}
+  from {{ transform:scaleX(0); }}
+  to   {{ transform:scaleX(1); }}
 }}
-.pb-fill {{ animation:barGrow 0.95s cubic-bezier(0.22,0.61,0.36,1) both; }}
+.pb-fill {{ transform-origin:left center; animation:barGrow 1.0s cubic-bezier(0.22,0.61,0.36,1) both; }}
 
 /* ⑥ ヘッダーグラデーション */
 @keyframes headerGrad {{
@@ -770,45 +735,86 @@ def calendar_heatmap(df_stop: pd.DataFrame, year: int, month: int,
 
 
 def inject_animations():
-    components.html("""<script>
-(function(){
-  try{
-    var doc=window.parent.document;
+    import json as _json
 
-    /* ① フェードイン IntersectionObserver */
-    var obs=new IntersectionObserver(function(entries){
-      entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('in-view');});
-    },{threshold:0.06});
-    function initFadeUp(){
-      doc.querySelectorAll('.fade-up').forEach(function(el){obs.observe(el);});
-    }
-    initFadeUp();
-    new MutationObserver(function(){initFadeUp();})
-      .observe(doc.body,{childList:true,subtree:true});
+    # アニメーション専用CSS — JSONでJS側に渡すことでf-stringとJSの{}が干渉しない
+    anim_css = (
+        # ① fadeInUp
+        "@keyframes alkFadeUp{"
+        "from{opacity:0;transform:translateY(20px)}"
+        "to{opacity:1;transform:translateY(0)}"
+        "}"
+        # ② LED pulse — ok
+        "@keyframes alkLedOk{"
+        "0%,100%{box-shadow:0 0 2px 1px " + SECONDARY + ";opacity:1}"
+        "50%{box-shadow:0 0 10px 5px " + SECONDARY + ";opacity:0.45}"
+        "}"
+        # ② LED pulse — warn
+        "@keyframes alkLedWarn{"
+        "0%,100%{box-shadow:0 0 2px 1px " + COLOR_WARN + ";opacity:1}"
+        "50%{box-shadow:0 0 10px 5px " + COLOR_WARN + ";opacity:0.45}"
+        "}"
+        # ② LED pulse — err
+        "@keyframes alkLedErr{"
+        "0%,100%{box-shadow:0 0 2px 1px " + COLOR_ERR + ";opacity:1}"
+        "50%{box-shadow:0 0 10px 5px " + COLOR_ERR + ";opacity:0.45}"
+        "}"
+        ".pdot-ok{animation:alkLedOk 2.6s ease-in-out infinite!important}"
+        ".pdot-warn{animation:alkLedWarn 1.6s ease-in-out infinite!important}"
+        ".pdot-err{animation:alkLedErr 1.0s ease-in-out infinite!important}"
+        # ④ hover
+        "[data-testid='stMetricContainer']{"
+        "transition:transform .18s ease,box-shadow .18s ease!important}"
+        "[data-testid='stMetricContainer']:hover{"
+        "transform:translateY(-5px)!important;"
+        "box-shadow:0 8px 24px rgba(0,0,0,.16)!important}"
+    )
+    css_json = _json.dumps(anim_css)
+
+    components.html(f"""<script>
+(function(){{
+  try{{
+    var doc = window.parent.document;
+
+    /* --- CSS を <head> に注入（更新式） --- */
+    var tag = doc.getElementById('alk-anim-style');
+    if (!tag) {{ tag = doc.createElement('style'); tag.id = 'alk-anim-style'; doc.head.appendChild(tag); }}
+    tag.textContent = {css_json};
+
+    /* ① フェードイン — MetricCard・Plotlyを対象にJSで付与 */
+    function applyFadeIn() {{
+      var sel = '[data-testid="stMetricContainer"]:not([data-alk-fi]),[data-testid="stPlotlyChart"]:not([data-alk-fi]),[data-testid="stVerticalBlockBorderWrapper"]:not([data-alk-fi])';
+      doc.querySelectorAll(sel).forEach(function(el, i) {{
+        el.setAttribute('data-alk-fi', '1');
+        el.style.animation = 'alkFadeUp 0.48s cubic-bezier(.22,.61,.36,1) ' + (i * 0.055) + 's both';
+      }});
+    }}
+    setTimeout(applyFadeIn, 80);
+    new MutationObserver(applyFadeIn).observe(doc.body, {{childList: true, subtree: true}});
 
     /* ③ 数値カウントアップ */
-    function countUp(el){
-      var raw=(el.innerText||'').trim();
-      var num=parseFloat(raw.replace(/[,\s%]/g,''));
-      if(isNaN(num)||num===0) return;
-      var suffix=raw.replace(/[\d.,]/g,'').trim();
-      var isInt=Number.isInteger(num);
-      var dur=850, steps=48, step=0;
-      var timer=setInterval(function(){
+    function countUp(el) {{
+      var raw = (el.innerText || '').trim();
+      var num = parseFloat(raw.replace(/[,\\s%]/g, ''));
+      if (isNaN(num) || num === 0) return;
+      var sfx = raw.replace(/[\\d.,]/g, '').trim();
+      var isInt = Math.abs(num - Math.round(num)) < 0.005;
+      var step = 0, tot = 50;
+      el.setAttribute('data-alk-ct', '1');
+      var t = setInterval(function() {{
         step++;
-        var cur=num*step/steps;
-        var disp=isInt?Math.round(cur).toLocaleString():cur.toFixed(1);
-        el.innerText=disp+suffix;
-        if(step>=steps){
-          el.innerText=(isInt?Math.round(num).toLocaleString():num.toFixed(1))+suffix;
-          clearInterval(timer);
-        }
-      },dur/steps);
-    }
-    setTimeout(function(){
-      doc.querySelectorAll('[data-testid="stMetricValue"]').forEach(countUp);
-    },350);
+        var cur = num * step / tot;
+        el.innerText = (isInt ? Math.round(cur).toLocaleString() : cur.toFixed(1)) + sfx;
+        if (step >= tot) {{
+          el.innerText = (isInt ? Math.round(num).toLocaleString() : num.toFixed(1)) + sfx;
+          clearInterval(t);
+        }}
+      }}, 900 / tot);
+    }}
+    setTimeout(function() {{
+      doc.querySelectorAll('[data-testid="stMetricValue"]:not([data-alk-ct])').forEach(countUp);
+    }}, 420);
 
-  }catch(e){}
-})();
+  }} catch(e) {{ console.warn('alk-anim:', e); }}
+}})();
 </script>""", height=0, scrolling=False)
