@@ -7,7 +7,6 @@ NAV = {
     "メイン": [
         st.Page(str(BASE / "pages" / "0_ダッシュボード.py"),  title="ダッシュボード", icon="🏭"),
         st.Page(str(BASE / "pages" / "11_今日今週.py"),        title="メイン",         icon="🏠"),
-        st.Page(str(BASE / "pages" / "16_アラート.py"),        title="アラート",       icon="🚨"),
         st.Page(str(BASE / "pages" / "14_週報.py"),            title="週次レポート",   icon="📋"),
         st.Page(str(BASE / "pages" / "1_データ取込.py"),       title="データ取込",     icon="📥"),
     ],
