@@ -52,16 +52,28 @@ def get_stoppages(factory: str = "", date_from: str = "", date_to: str = "") -> 
 
 
 def _stop_key_sets_db():
-    res = _sb().table("stoppages").select("factory,notes,date,area,duration_minutes").execute()
+    res = _sb().table("stoppages").select("factory,notes,date,area,stop_time,duration_minutes").execute()
     rows = res.data or []
     notes_set = set(
         f"{r['factory']}|{r['notes']}" for r in rows if not _is_blank(r.get("notes", ""))
     )
-    composite_set = set(
-        f"{r['date']}|{r['factory']}|{r['area']}|{r['duration_minutes']}"
-        for r in rows if _is_blank(r.get("notes", ""))
-    )
+    composite_set = set()
+    for r in rows:
+        if not _is_blank(r.get("notes", "")):
+            continue
+        stop_t = str(r.get("stop_time", "")).strip()
+        if stop_t and stop_t.lower() not in ("", "nan", "none"):
+            composite_set.add(f"{r['date']}|{r['factory']}|{r['area']}|{stop_t}")
+        else:
+            composite_set.add(f"{r['date']}|{r['factory']}|{r['area']}|{r['duration_minutes']}")
     return notes_set, composite_set
+
+
+def _stop_composite_key(r: dict) -> str:
+    stop_t = str(r.get("stop_time", "")).strip()
+    if stop_t and stop_t.lower() not in ("", "nan", "none"):
+        return f"{r.get('date','')}|{r.get('factory','')}|{r.get('area','')}|{stop_t}"
+    return f"{r.get('date','')}|{r.get('factory','')}|{r.get('area','')}|{r.get('duration_minutes','')}"
 
 
 def check_duplicates_stoppages(records: list[dict]) -> tuple[list[dict], int]:
@@ -74,12 +86,12 @@ def check_duplicates_stoppages(records: list[dict]) -> tuple[list[dict], int]:
         if notes_key and notes_key in existing_notes:
             skipped += 1; continue
         if not notes:
-            key = f"{r.get('date','')}|{fact}|{r.get('area','')}|{r.get('duration_minutes','')}"
+            key = _stop_composite_key(r)
             if key in existing_composite:
                 skipped += 1; continue
         new_records.append(r)
         if notes_key: existing_notes.add(notes_key)
-        else: existing_composite.add(f"{r.get('date','')}|{fact}|{r.get('area','')}|{r.get('duration_minutes','')}")
+        else: existing_composite.add(_stop_composite_key(r))
     return new_records, skipped
 
 
@@ -94,7 +106,7 @@ def add_stoppages(records: list[dict]) -> tuple[int, int]:
         if notes_key and notes_key in existing_notes:
             skipped += 1; continue
         if not notes:
-            key = f"{r.get('date','')}|{fact}|{r.get('area','')}|{r.get('duration_minutes','')}"
+            key = _stop_composite_key(r)
             if key in existing_composite:
                 skipped += 1; continue
         r["id"] = str(uuid.uuid4())[:8]
@@ -102,7 +114,7 @@ def add_stoppages(records: list[dict]) -> tuple[int, int]:
         for c in STOPPAGE_COLS: r.setdefault(c, "")
         new_records.append(r)
         if notes_key: existing_notes.add(notes_key)
-        else: existing_composite.add(f"{r.get('date','')}|{fact}|{r.get('area','')}|{r.get('duration_minutes','')}")
+        else: existing_composite.add(_stop_composite_key(r))
     if new_records:
         rows = [pd.Series(r).where(pd.notna(pd.Series(r)), other=None).to_dict() for r in new_records]
         _sb().table("stoppages").insert(rows).execute()

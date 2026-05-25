@@ -25,7 +25,8 @@ BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
 
 from utils.operative_parser import is_operative_format, parse_operative_file
-from utils.data_store import add_operative
+from utils.shift_report_parser import is_shift_report_format, parse_shift_report
+from utils.data_store import add_operative, add_stoppages
 
 # ═══════════════════════════════════════════════════════════
 #  設定（secrets.toml から読み込み）
@@ -397,12 +398,47 @@ def _archive_file(path: Path) -> None:
     log.info(f"  整理完了: {path.name} → {year}/{month_label}/{dest.name}")
 
 
+# Оп.сводки の補助バリアント（同日でmainより古いデータ）は取り込まない
+_OPERATIVE_SKIP_PATTERNS = [
+    'Оперативные сводки _2',
+    'Оперативные сводки _3',
+    'Оперативные сводки _2_2',
+    'Оперативные сводки ЕДС_2',
+]
+
+
+def _is_operative_variant(path: Path) -> bool:
+    name = path.stem
+    return any(p in name for p in _OPERATIVE_SKIP_PATTERNS)
+
+
 def _process_file(path: Path) -> tuple[int, int]:
     try:
         buf = io.BytesIO(path.read_bytes())
+
+        # ── Оп.сводки _2 系はスキップ（main ファイルが正式版）──
+        if _is_operative_variant(path):
+            log.info(f"  スキップ（補助バリアント）: {path.name}")
+            return -1, 0  # -1 = スキップ済み（アーカイブは行う）
+
+        # ── Сменный рапорт（製材工場シフトレポート）──
+        buf.seek(0)
+        if is_shift_report_format(buf):
+            buf.seek(0)
+            records, detected_date, errors = parse_shift_report(buf)
+            for e in errors:
+                log.warning(f"  [{path.name}] {e}")
+            if not records:
+                log.info(f"  [{path.name}] 停止データなし (日付={detected_date})")
+                return -1, 0  # 停止なし = スキップ扱い（アーカイブする）
+            added, skipped = add_stoppages(records)
+            log.info(f"  [{path.name}] 停止データ取込: {added}件追加 / {skipped}件スキップ (日付={detected_date})")
+            return added, skipped
+
+        # ── Оп.сводки（日次生産指標）──
         buf.seek(0)
         if not is_operative_format(buf):
-            log.info(f"  スキップ（1C日報フォーマット外）: {path.name}")
+            log.info(f"  スキップ（未対応フォーマット）: {path.name}")
             return 0, 0
         buf.seek(0)
         records, detected_date, errors = parse_operative_file(buf)
@@ -414,6 +450,7 @@ def _process_file(path: Path) -> tuple[int, int]:
         added, skipped = add_operative(records)
         log.info(f"  [{path.name}] 取込完了: {added}件追加 / {skipped}件スキップ (日付={detected_date})")
         return added, skipped
+
     except Exception as e:
         log.error(f"  [{path.name}] 取込エラー: {e}", exc_info=True)
         return 0, 0
@@ -437,10 +474,16 @@ def _scan_folder(processed: set, today_count: int,
             last_import = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             last_file   = xlsx.name
             try:
-                _archive_file(xlsx)  # 成功時のみ → 取込済みフォルダへ
+                _archive_file(xlsx)
             except Exception as e:
                 log.warning(f"  整理エラー: {e}")
-            _notify("ALK インポート完了", f"{xlsx.name}  —  {added}件の生産指標を取り込みました")
+            _notify("ALK インポート完了", f"{xlsx.name}  —  {added}件取り込みました")
+        elif added == -1:
+            # スキップ扱い（バリアントファイル or 停止なし）→ アーカイブだけ行う
+            try:
+                _archive_file(xlsx)
+            except Exception as e:
+                log.warning(f"  整理エラー: {e}")
         else:
             log.warning(f"  インポート失敗 → 未取込みフォルダに残します: {xlsx.name}")
     return today_count, last_import, last_file
@@ -482,7 +525,12 @@ def main() -> None:
                     _archive_file(xlsx)
                 except Exception as e:
                     log.warning(f"  整理スキップ: {xlsx.name} ({e})")
-                _notify("ALK インポート完了", f"{xlsx.name}  —  {added}件の生産指標を取り込みました")
+                _notify("ALK インポート完了", f"{xlsx.name}  —  {added}件取り込みました")
+            elif added == -1:
+                try:
+                    _archive_file(xlsx)
+                except Exception as e:
+                    log.warning(f"  整理スキップ: {xlsx.name} ({e})")
             else:
                 log.warning(f"  インポート失敗 → 未取込みフォルダに残します: {xlsx.name}")
             processed.add(f"{xlsx.name}|0")

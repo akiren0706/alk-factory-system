@@ -11,6 +11,7 @@ from utils.data_store import (
 )
 from utils.hierarchical_parser import is_hierarchical_format, parse_hierarchical_stoppage
 from utils.operative_parser import is_operative_format, parse_operative_file
+from utils.shift_report_parser import is_shift_report_format, parse_shift_report
 from utils.ui_helpers import page_setup, themed_table
 
 st.set_page_config(page_title="データ取込", page_icon="📥", layout="wide")
@@ -156,10 +157,12 @@ def _detect_flat_dtype(columns: list[str]) -> str:
     return "stoppage" if stop_score >= prod_score else "production"
 
 
-operative_files, hier_files, flat_files = [], [], []
+operative_files, shift_files, hier_files, flat_files = [], [], [], []
 for f in uploaded_files:
     if is_operative_format(f):
         operative_files.append(f)
+    elif is_shift_report_format(f):
+        shift_files.append(f)
     elif _detect_hierarchical(f):
         hier_files.append(f)
     else:
@@ -167,10 +170,11 @@ for f in uploaded_files:
 
 # 判定結果サマリー
 if uploaded_files:
-    c1, c2, c3 = st.columns(3)
-    c1.metric("1C日報（生産指標）", f"{len(operative_files)} ファイル")
-    c2.metric("階層型停止レポート",  f"{len(hier_files)} ファイル")
-    c3.metric("フラット表形式",      f"{len(flat_files)} ファイル")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("1C日報（生産指標）",       f"{len(operative_files)} ファイル")
+    c2.metric("シフトレポート（停止）",    f"{len(shift_files)} ファイル")
+    c3.metric("階層型停止レポート",        f"{len(hier_files)} ファイル")
+    c4.metric("フラット表形式",            f"{len(flat_files)} ファイル")
     st.divider()
 
 # ════════════════════════════════════════════════════════════════
@@ -221,6 +225,67 @@ if operative_files:
             st.balloons()
     else:
         st.error("指標データを抽出できませんでした。")
+
+    st.divider()
+
+# ════════════════════════════════════════════════════════════════
+#  S: Сменный рапорт（製材工場シフトレポート）
+# ════════════════════════════════════════════════════════════════
+if shift_files:
+    st.info(f"🔧  **製材工場シフトレポート（Сменный рапорт）** {len(shift_files)} ファイルを自動検出しました。")
+
+    all_shift_records: list[dict] = []
+    shift_file_stats: list[dict]  = []
+    shift_errors: list[str]       = []
+
+    with st.spinner("シフトレポートを解析中..."):
+        for f in shift_files:
+            f.seek(0)
+            recs, detected_date, errs = parse_shift_report(f)
+            all_shift_records.extend(recs)
+            shift_file_stats.append({
+                "ファイル名": f.name,
+                "日付": detected_date or "⚠️ 未検出",
+                "停止件数": len(recs),
+            })
+            shift_errors.extend(errs)
+
+    for msg in shift_errors:
+        st.warning(f"⚠️  {msg}")
+
+    if all_shift_records:
+        st.subheader("解析結果")
+        themed_table(pd.DataFrame(shift_file_stats))
+
+        new_shift, dup_shift = check_duplicates_stoppages(all_shift_records)
+
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("抽出合計",        f"{len(all_shift_records)} 件")
+        col_b.metric("新規（取込対象）", f"{len(new_shift)} 件")
+        col_c.metric("重複スキップ",     f"{dup_shift} 件")
+
+        if new_shift:
+            with st.expander("データプレビュー（新規先頭10件）"):
+                preview_df = pd.DataFrame(new_shift[:10])
+                disp_cols = [c for c in ["date", "factory", "area", "stop_time", "duration_minutes", "reason", "notes"]
+                             if c in preview_df.columns]
+                label_map = {"date": "日付", "factory": "工場", "area": "エリア/ライン",
+                             "stop_time": "開始時刻", "duration_minutes": "停止時間(分)",
+                             "reason": "停止区分", "notes": "コメント"}
+                themed_table(preview_df[disp_cols].rename(columns=label_map))
+
+        st.divider()
+        if new_shift:
+            if st.button("✅  シフトレポートの停止データを取込む", type="primary",
+                         use_container_width=True, key="shift_import"):
+                added, skipped = add_stoppages(new_shift)
+                st.success(f"🎉  {added} 件の停止データを取り込みました！（重複スキップ: {skipped} 件）")
+                st.balloons()
+        else:
+            st.info("すべてのレコードは既に取込済みです。")
+    else:
+        themed_table(pd.DataFrame(shift_file_stats))
+        st.info("停止データなし（停止0件のシフトレポートです）。")
 
     st.divider()
 
@@ -362,3 +427,54 @@ if flat_files:
                 st.balloons()
 
         st.divider()
+
+# ════════════════════════════════════════════════════════════════
+#  過去データ一括取込み（製材工場シフトレポート）
+# ════════════════════════════════════════════════════════════════
+st.markdown('<div class="section-tag">📂 過去データ一括取込み（製材工場停止データ）</div>', unsafe_allow_html=True)
+st.caption("1C生産データフォルダ内の全シフトレポートを一括でDBに取り込みます（重複は自動スキップ）")
+
+_1C_DIR = Path(r"C:\Users\r-akiyama\Desktop\１C生産データ")
+_SHIFT_PATTERNS = [
+    "**/*Сменный рапорт мастера ЦЛП (XLSX).xlsx",
+    "**/*Сменный рапорт мастера ЦЛП (XLSX)_2.xlsx",
+    "**/*Сменный рапорт мастера ЦЛП (XLSX)_3.xlsx",
+    "**/*Сменный рапорт мастера ЦЛП (XLSX)_2_2.xlsx",
+]
+
+if st.button("📂 過去のシフトレポートを一括取込み（全期間）", type="primary",
+             use_container_width=True, key="bulk_shift_import"):
+    if not _1C_DIR.exists():
+        st.error(f"1C生産データフォルダが見つかりません: {_1C_DIR}")
+    else:
+        import io as _io
+        all_paths = []
+        for pat in _SHIFT_PATTERNS:
+            all_paths.extend(_1C_DIR.glob(pat))
+        all_paths = sorted(set(all_paths))
+
+        if not all_paths:
+            st.warning("シフトレポートファイルが見つかりませんでした。")
+        else:
+            st.info(f"対象ファイル: {len(all_paths)} 件 — 取込み開始...")
+            progress = st.progress(0)
+            status_ph = st.empty()
+            total_added = total_skipped = total_errors = 0
+
+            for i, path in enumerate(all_paths):
+                try:
+                    buf = _io.BytesIO(path.read_bytes())
+                    recs, detected_date, errs = parse_shift_report(buf)
+                    if recs:
+                        added, skipped = add_stoppages(recs)
+                        total_added   += added
+                        total_skipped += skipped
+                except Exception:
+                    total_errors += 1
+                progress.progress((i + 1) / len(all_paths))
+                if (i + 1) % 50 == 0 or (i + 1) == len(all_paths):
+                    status_ph.text(f"処理済: {i+1}/{len(all_paths)} | 追加: {total_added} | スキップ: {total_skipped} | エラー: {total_errors}")
+
+            st.success(f"🎉 一括取込み完了！　追加: {total_added} 件 / 重複スキップ: {total_skipped} 件 / エラー: {total_errors} 件")
+            if total_added > 0:
+                st.balloons()
