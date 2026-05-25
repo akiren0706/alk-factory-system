@@ -166,6 +166,22 @@ def parse_shift_report(file_buffer) -> tuple[list[dict], str, list[str]]:
             errors.append('停止データの列構成を解析できませんでした')
             return records, detected_date, errors
 
+        # マージセルのズレ補正：ヘッダーの「Простой」が実際のデータ列より1列右に
+        # 検出されるケースを、データ行の実測で確認して修正する
+        _time_re = re.compile(r'^\d+:\d{2}:\d{2}$')
+        for _ri in range(header_row + 1, min(header_row + 6, len(df))):
+            _sv = _cell(df.iloc[_ri], col_start)
+            if not _sv:
+                continue
+            _dv = _cell(df.iloc[_ri], col_dur)
+            _dv_prev = _cell(df.iloc[_ri], col_dur - 1) if col_dur >= 1 else ''
+            if not _time_re.match(_dv) and _time_re.match(_dv_prev):
+                col_dur    -= 1
+                if col_type    >= 1: col_type    -= 1
+                if col_comment >= 1: col_comment -= 1
+                if col_machine >= 1: col_machine -= 1
+            break
+
         # 停止データ行を読む（Выполнение задания まで）
         current_area = ''
         for ri in range(header_row + 1, len(df)):
