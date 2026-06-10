@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date, timedelta
-from utils.data_store import get_stoppages, get_operative
+from utils.data_store import get_stoppages, get_operative, translate_unit
 from utils.master_data import TARGET_FACTORIES
 from utils.ui_helpers import (
     themed_table,
@@ -85,7 +85,7 @@ def _prod_section(df_op_day, label: str = ""):
         with p_cols[i]:
             st.metric(
                 label=f"{r['icon']} {r['工場']}",
-                value=f"{r['実績']:,.0f} {r['単位']}",
+                value=f"{r['実績']:,.0f} {translate_unit(r['単位'])}",
                 delta=pct_str, delta_color=dc,
             )
 

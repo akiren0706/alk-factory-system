@@ -6,14 +6,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, date as _date
-from utils.data_store import get_stoppages, get_operative
+from utils.data_store import get_stoppages, get_operative, translate_unit
 from utils.ui_helpers import (
     themed_table,
     page_setup, apply_chart_theme,
     jp_date_input, unit_radio, extract_stop_type, smart_period,
     plan_fact_bar, achievement_bar, gauge_chart, calendar_heatmap,
     page_header_html, animated_kpi_html, get_palette,
-    COLOR_OK, COLOR_WARN, COLOR_ERR, PRIMARY, CARD, BORDER, TEXT, TEXT_SUB,
+    COLOR_OK, COLOR_WARN, COLOR_ERR, PRIMARY, CARD, BORDER, TEXT, TEXT_SUB, jst_today,
 )
 from utils.operative_parser import KEY_INDICATOR_PREFIXES
 from utils.master_data import fix_indicator_name
@@ -88,16 +88,16 @@ def render_factory_page(factory: str):
         factory,
         subtitle="Factory Detail View",
         icon=icon,
-        right_text=date.today().strftime("%Y年%m月%d日"),
+        right_text=jst_today().strftime("%Y年%m月%d日"),
     ), unsafe_allow_html=True)
 
     # ── フィルター ────────────────────────────────────────────
     with st.container(border=True):
         c1, c2, c3 = st.columns([3, 3, 1])
         with c1:
-            date_from = jp_date_input("開始日", date.today().replace(day=1), f"fv_from_{factory}")
+            date_from = jp_date_input("開始日", jst_today().replace(day=1), f"fv_from_{factory}")
         with c2:
-            date_to = jp_date_input("終了日", date.today(), f"fv_to_{factory}")
+            date_to = jp_date_input("終了日", jst_today(), f"fv_to_{factory}")
         with c3:
             unit, divisor = unit_radio(horizontal=False)
 
@@ -678,6 +678,7 @@ def render_factory_page(factory: str):
                 lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]),
                 axis=1,
             )
+            show_op["unit"] = show_op["unit"].apply(translate_unit)
             themed_table(
                 show_op[["date", "指標", "unit", "plan", "fact", "達成率(%)"]].rename(columns={
                     "date": "日付", "指標": "指標", "unit": "単位",

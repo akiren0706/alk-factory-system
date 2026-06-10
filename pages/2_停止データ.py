@@ -269,6 +269,7 @@ else:
                 cnt = st.session_state.get("_del_count", 0)
                 if st.button(f"⚠️  {cnt} 件を削除する（取り消し不可）", type="primary", key="del_exec"):
                     deleted = delete_stoppages_bulk(del_factory, df_from_str, df_to_str)
+                    st.cache_data.clear()
                     st.success(f"✅  {deleted} 件を削除しました。")
                     st.session_state.pop("_del_ready", None)
                     st.session_state.pop("_del_count", None)
@@ -280,6 +281,7 @@ else:
             if st.button("削除実行", type="secondary", key="del_single"):
                 if del_id.strip():
                     delete_stoppage(del_id.strip())
+                    st.cache_data.clear()
                     st.success(f"ID: {del_id} を削除しました。")
                     st.rerun()
                 else:

@@ -15,6 +15,10 @@ NAV = {
         st.Page(str(BASE / "pages" / "3_生産データ.py"),       title="生産データ",     icon="📦"),
         st.Page(str(BASE / "pages" / "2_停止データ.py"),       title="停止データ",     icon="⏸️"),
         st.Page(str(BASE / "pages" / "4_レポート.py"),         title="レポート",       icon="📋"),
+        st.Page(str(BASE / "pages" / "15_アラート.py"),        title="アラート",       icon="🚨"),
+    ],
+    "システム": [
+        st.Page(str(BASE / "pages" / "99_設定.py"),            title="設定",           icon="⚙️"),
     ],
     "工場別": [
         st.Page(str(BASE / "pages" / "6_単板工場.py"),         title="単板工場",       icon="🪵"),

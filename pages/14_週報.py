@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date, timedelta
-from utils.data_store import get_stoppages, get_operative
+from utils.data_store import get_stoppages, get_operative, translate_unit
 from utils.master_data import TARGET_FACTORIES, fix_indicator_name
 from utils.ui_helpers import (
     themed_table,
@@ -31,7 +31,7 @@ def week_bounds(ref: date) -> tuple[date, date]:
     return sun, sat
 
 
-# セッション: 基準日（デフォルト = 前週の月曜=今週の日曜-7日前）
+# セッション: 基準日（デフォルト = 前週の日曜 = 今週の日曜 - 7日）
 if "weekly_ref" not in st.session_state:
     days_since_sun = (today.weekday() + 1) % 7
     this_week_sun  = today - timedelta(days=days_since_sun)
@@ -67,8 +67,9 @@ with col_nav:
 st.divider()
 
 # ── データ取得 ────────────────────────────────────────────────
-df_op   = get_operative("", str(w_sun), str(w_sat))
-df_stop = get_stoppages("", str(w_sun), str(w_sat))
+with st.spinner("データを読み込み中..."):
+    df_op   = get_operative("", str(w_sun), str(w_sat))
+    df_stop = get_stoppages("", str(w_sun), str(w_sat))
 
 # ── KPIサマリー ──────────────────────────────────────────────
 op_days   = df_op["date"].nunique()   if not df_op.empty   else 0
@@ -123,7 +124,7 @@ else:
             with p_cols[i]:
                 st.metric(
                     label=f"{r['icon']} {r['工場']}",
-                    value=f"{r['実績']:,.0f} {r['単位']}",
+                    value=f"{r['実績']:,.0f} {translate_unit(r['単位'])}",
                     delta=pct_str, delta_color=dc,
                 )
 

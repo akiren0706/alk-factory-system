@@ -411,8 +411,9 @@ def jp_date_input(label: str, default: date, key: str) -> date:
     if key not in st.session_state:
         st.session_state[key] = default
     elif st.session_state[key] < today and (today - st.session_state[key]).days <= 1:
-        # タイムゾーンずれで前日のままになっている場合は本日にリセット（終了日系）
-        if (today - default).days <= 1:
+        # タイムゾーンずれで前日のままになっている場合は本日にリセット（終了日系のみ）
+        # default == today のときだけ対象にする（開始日系は月初等が default なので対象外）
+        if default == today:
             st.session_state[key] = today
     return st.date_input(label, key=key, format="YYYY/MM/DD")
 
@@ -849,15 +850,22 @@ def inject_animations():
     _fiObs.observe(doc.body, {{childList: true, subtree: true}});
 
     /* ③ 数値カウントアップ */
-    function animCount(el, num, suffix, isInt, dur) {{
-      var step = 0, tot = 50;
+    function animCount(el, num, fmt, dur) {{
+      var step = 0, tot = 50, last = el.innerText;
       el.setAttribute('data-alk-ct', '1');
       var t = setInterval(function() {{
+        if (el.innerText !== last) {{
+          /* Streamlit側が値を更新した → 中断して新しい値を尊重 */
+          clearInterval(t);
+          el.removeAttribute('data-alk-ct');
+          return;
+        }}
         step++;
-        var cur = num * step / tot;
-        el.innerText = (isInt ? Math.round(cur).toLocaleString() : cur.toFixed(1)) + suffix;
+        last = fmt(num * step / tot);
+        el.innerText = last;
         if (step >= tot) {{
-          el.innerText = (isInt ? Math.round(num).toLocaleString() : num.toFixed(1)) + suffix;
+          last = fmt(num);
+          el.innerText = last;
           clearInterval(t);
         }}
       }}, (dur || 900) / tot);
@@ -871,25 +879,29 @@ def inject_animations():
         var xNum = parseFloat(parts[0].replace(/[,\\s]/g, ''));
         if (!isNaN(xNum) && xNum >= 0) {{
           var tail = ' / ' + parts.slice(1).join(' / ');
-          animCount(el, xNum, tail, true, 700);
-          return;
+          animCount(el, xNum, function(v) {{ return Math.round(v).toLocaleString() + tail; }}, 700);
         }}
         return;  /* 解析できなければスキップ */
       }}
 
-      /* ── 日付・テキスト主体の値はスキップ ── */
-      if (raw.indexOf('/') >= 0) return;  /* YYYY/MM/DD など */
-      if (/\\d-\\d/.test(raw)) return;     /* YYYY-MM-DD など */
-      if (raw.indexOf('〜') >= 0 || raw.indexOf('～') >= 0) return;
-      if (raw === '－' || raw === '―' || raw === 'ー' || raw === '-') return;
-      if (!/^[0-9]/.test(raw)) return;
-
-      /* ── 通常数値 ── */
-      var num = parseFloat(raw.replace(/[,\\s%]/g, ''));
+      /* ── 「先頭の数値1つ + 単位」のみ対象。06月10日・12:34・4時間30分 のように
+            数値が複数含まれる値は書き換えると壊れるため一切触らない ── */
+      var m = raw.match(/^([0-9][0-9,]*(?:\\.[0-9]+)?)(.*)$/);
+      if (!m || /[0-9]/.test(m[2])) return;
+      var numStr = m[1], sfx = m[2];
+      var num = parseFloat(numStr.replace(/,/g, ''));
       if (isNaN(num) || num === 0) return;
-      var sfx = raw.replace(/[\\d.,]/g, '').trim();
-      var isInt = Math.abs(num - Math.round(num)) < 0.005;
-      animCount(el, num, sfx, isInt, 900);
+
+      /* 元の表記（小数桁数・カンマ有無）を保ったまま整形する */
+      var dec = (numStr.split('.')[1] || '').length;
+      var grouped = numStr.indexOf(',') >= 0;
+      var fmt = function(v) {{
+        var s = grouped
+          ? v.toLocaleString(undefined, {{minimumFractionDigits: dec, maximumFractionDigits: dec}})
+          : (dec > 0 ? v.toFixed(dec) : String(Math.round(v)));
+        return s + sfx;
+      }};
+      animCount(el, num, fmt, 900);
     }}
     function runCountUp() {{
       doc.querySelectorAll('[data-testid="stMetricValue"]:not([data-alk-ct])').forEach(countUp);

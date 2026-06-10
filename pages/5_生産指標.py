@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date
 import numpy as np
-from utils.data_store import get_operative, delete_operative_bulk
+from utils.data_store import get_operative, delete_operative_bulk, translate_unit
 from utils.master_data import TARGET_FACTORIES, fix_indicator_name
 from utils.ui_helpers import (
     themed_table, page_setup, apply_chart_theme, jp_date_input,
@@ -30,7 +30,8 @@ with st.expander("🔍 フィルター", expanded=True):
         date_to = jp_date_input("終了日", jst_today(), "odt")
 
 factory_filter = "" if sel_factory == "全工場" else sel_factory
-df = get_operative(factory_filter, str(date_from), str(date_to))
+with st.spinner("データを読み込み中（初回・年変更時は20〜30秒かかります）..."):
+    df = get_operative(factory_filter, str(date_from), str(date_to))
 
 col_dl, col_info = st.columns([1, 4])
 col_info.caption(f"検索結果: {len(df)} 件")
@@ -289,6 +290,7 @@ if tab_factories:
 
             with st.expander("📋 詳細データ一覧"):
                 disp = fac_df[["date", "表示名", "unit", "plan_n", "fact_n", "ach"]].copy()
+                disp["unit"] = disp["unit"].apply(translate_unit)
                 disp["ach"] = disp["ach"].round(1)
                 themed_table(disp.rename(columns={
                     "date": "日付", "表示名": "指標", "unit": "単位",
@@ -310,6 +312,7 @@ with st.expander("📋 全工場 全指標一覧"):
         lambda r: fix_indicator_name(r["indicator_ru"], r["indicator_jp"]), axis=1
     )
     show["達成率(%)"] = show["ach"].round(1)
+    show["unit"] = show["unit"].apply(translate_unit)
     themed_table(
         show[["date", "factory", "指標", "unit", "plan_n", "fact_n", "達成率(%)"]].rename(columns={
             "date": "日付", "factory": "工場", "unit": "単位",
@@ -329,5 +332,6 @@ with st.expander("🗑️ データを削除"):
         del_to = jp_date_input("終了日", jst_today(), "od_to")
     if st.button("⚠️  条件に一致するデータを削除（取り消し不可）", type="primary", key="od_del"):
         deleted = delete_operative_bulk(del_fac, str(del_from), str(del_to))
+        st.cache_data.clear()
         st.success(f"✅  {deleted} 件を削除しました。")
         st.rerun()

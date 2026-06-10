@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date
-from utils.data_store import get_operative
+from utils.data_store import get_operative, translate_unit
 from utils.ui_helpers import (
     themed_table, page_setup, apply_chart_theme, jp_date_input,
     plan_fact_bar, animated_kpi_html,
@@ -184,6 +184,7 @@ with st.expander("📋 詳細データ一覧"):
         pd.to_numeric(show["fact"], errors="coerce") /
         pd.to_numeric(show["plan"], errors="coerce") * 100
     ).round(1).where(pd.to_numeric(show["plan"], errors="coerce") > 0)
+    show["unit"] = show["unit"].apply(translate_unit)
     show_disp = show[["date", "indicator_jp", "indicator_ru", "unit", "plan", "fact", "達成率(%)"]].copy()
     show_disp.columns = ["日付", "指標(日)", "指標(露)", "単位", "計画", "実績", "達成率(%)"]
     themed_table(show_disp, height=400)

@@ -32,10 +32,13 @@ unit_label     = f"停止時間（{unit}）"
 factory_filter = "" if sel_factory == "全工場" else sel_factory
 df_stop = get_stoppages(factory_filter, str(date_from), str(date_to))
 
-# 比較期間（同期間長の前期）
-_period_days = max((date_to - date_from).days, 1)
-_prev_to     = date_from - timedelta(days=1)
-_prev_from   = _prev_to - timedelta(days=_period_days - 1)
+# 比較期間（前年同期）
+try:
+    _prev_from = date_from.replace(year=date_from.year - 1)
+    _prev_to   = date_to.replace(year=date_to.year - 1)
+except ValueError:
+    _prev_from = date_from.replace(year=date_from.year - 1, day=28)
+    _prev_to   = date_to.replace(year=date_to.year - 1, day=28)
 df_prev = get_stoppages(factory_filter, str(_prev_from), str(_prev_to))
 
 if df_stop.empty:

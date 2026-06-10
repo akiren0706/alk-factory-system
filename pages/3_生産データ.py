@@ -28,7 +28,13 @@ with st.container(border=True):
         date_to = jp_date_input("終了日", jst_today(), "pdt")
 
 factory_filter = "" if sel_factory == "全工場" else sel_factory
-df_op   = get_operative(factory_filter, str(date_from), str(date_to))
+
+if st.button("🔄 データ更新", key="pd_refresh"):
+    st.cache_data.clear()
+    st.rerun()
+
+with st.spinner("データを読み込み中（初回・年変更時は20〜30秒かかります）..."):
+    df_op   = get_operative(factory_filter, str(date_from), str(date_to))
 
 # ── KPI ───────────────────────────────────────────────────────
 st.divider()

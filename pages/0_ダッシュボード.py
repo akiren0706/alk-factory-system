@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, timedelta
-from utils.data_store import get_stoppages, get_operative
+from utils.data_store import get_stoppages, get_operative, translate_unit
 from utils.master_data import TARGET_FACTORIES, fix_indicator_name
 from utils.ui_helpers import (
     themed_table,
@@ -41,8 +41,9 @@ with st.container(border=True):
 
 unit_label     = f"停止時間（{unit}）"
 factory_filter = "" if sel_factory == "全工場" else sel_factory
-df_stop = get_stoppages(factory_filter, str(date_from), str(date_to))
-df_op   = get_operative(factory_filter, str(date_from), str(date_to))
+with st.spinner("データを読み込み中（初回・年変更時は20〜30秒かかります）..."):
+    df_stop = get_stoppages(factory_filter, str(date_from), str(date_to))
+    df_op   = get_operative(factory_filter, str(date_from), str(date_to))
 
 # ════════════════════════════════════════════════════════════
 # 1. 生産データ（最上部）
@@ -78,7 +79,7 @@ if prod_rows:
         with p_cols[i]:
             st.metric(
                 label=f"{r['icon']} {r['工場']}",
-                value=f"{r['実績']:,.0f} {r['単位']}",
+                value=f"{r['実績']:,.0f} {translate_unit(r['単位'])}",
                 delta=f"計画比 {pct_disp}",
                 delta_color=delta_col,
             )
@@ -160,9 +161,10 @@ st.divider()
 # ════════════════════════════════════════════════════════════
 st.markdown('<div class="section-tag">🏭 工場別ステータス（停止）</div>', unsafe_allow_html=True)
 
+df_stop_all = get_stoppages("", str(date_from), str(date_to))
 fac_cards = []
 for fac in TARGET_FACTORIES:
-    df_f = get_stoppages(fac, str(date_from), str(date_to))
+    df_f = df_stop_all[df_stop_all["factory"] == fac]
     cnt = len(df_f)
     hrs = df_f["duration_minutes"].sum() / 60 if not df_f.empty else 0
     status = "ok" if cnt == 0 else ("warn" if hrs < 2 else "err")
@@ -336,7 +338,8 @@ st.divider()
 # ════════════════════════════════════════════════════════════
 st.markdown('<div class="section-tag">🔮 翌週 停止時間予測</div>', unsafe_allow_html=True)
 
-_df_all = get_stoppages(factory_filter, "2024-01-01", str(jst_today()))
+_history_from = str(jst_today().replace(year=jst_today().year - 2))
+_df_all = get_stoppages(factory_filter, _history_from, str(jst_today()))
 if not _df_all.empty and len(_df_all) >= 7:
     import numpy as np
 

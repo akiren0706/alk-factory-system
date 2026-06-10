@@ -43,9 +43,11 @@ IMAP_PORT     = int(_email_cfg.get("imap_port", 993))
 EMAIL_ADDRESS = _email_cfg.get("address", "")
 EMAIL_PASS    = _email_cfg.get("password", "")
 TARGET_SENDER = _email_cfg.get("target_sender", "1c_alk@rfpgroup.ru")
+# M365はIMAP基本認証が廃止済みのため、O365アカウントではfalseにしてCOM経由を使う
+USE_IMAP      = bool(_email_cfg.get("use_imap", True))
 
 WATCH_DIR        = Path(r"C:\Users\r-akiyama\Desktop\１C生産データ")
-UNIMPORTED_DIR   = WATCH_DIR / "未取込み"   # ダウンロード直後の一時置き場
+UNIMPORTED_DIR   = WATCH_DIR / "未取込みデータ"   # ダウンロード直後の一時置き場
 STATUS_FILE      = BASE / "data" / "auto_import_status.json"
 LOG_FILE         = BASE / "logs" / "auto_import.log"
 POLL_SECONDS     = 60
@@ -167,6 +169,8 @@ def _save_status(last_check: str, last_import: str, today_count: int,
 def _check_imap() -> list[Path]:
     """IMAPで未読メールのXLSX添付をWATCH_DIRに保存"""
     downloaded: list[Path] = []
+    if not USE_IMAP:
+        return downloaded
     if not EMAIL_ADDRESS or not EMAIL_PASS:
         log.warning("IMAP設定がありません（secrets.tomlのemailセクションを確認）")
         return downloaded
@@ -495,7 +499,10 @@ def _scan_folder(processed: set, today_count: int,
 def main() -> None:
     log.info("=" * 55)
     log.info("ALK 自動インポート 起動")
-    log.info(f"  IMAP監視  : {EMAIL_ADDRESS} ({IMAP_HOST}:{IMAP_PORT})")
+    if USE_IMAP:
+        log.info(f"  IMAP監視  : {EMAIL_ADDRESS} ({IMAP_HOST}:{IMAP_PORT})")
+    else:
+        log.info("  IMAP監視  : 無効（secrets.toml: use_imap=false / COM経由で取込）")
     log.info(f"  COM監視   : 旧Outlook起動中なら自動で使用")
     log.info(f"  対象送信者: {TARGET_SENDER}")
     log.info(f"  フォルダ  : {WATCH_DIR}")
