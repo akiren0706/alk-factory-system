@@ -849,12 +849,26 @@ def inject_animations():
     _fiObs = new MutationObserver(applyFadeIn);
     _fiObs.observe(doc.body, {{childList: true, subtree: true}});
 
-    /* ③ 数値カウントアップ */
-    function animCount(el, num, fmt, dur) {{
-      var step = 0, tot = 50, last = el.innerText;
+    /* ③ 数値カウントアップ
+       重要: el.innerText への代入は React 管理下の子ノードを破壊し、
+       以後 Streamlit が値を更新しても画面に反映されなくなる。
+       必ず既存テキストノードの nodeValue だけを書き換えること。 */
+    function _soleTextNode(el) {{
+      var w = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      var n, found = null;
+      while ((n = w.nextNode())) {{
+        if (n.nodeValue && n.nodeValue.trim()) {{
+          if (found) return null;  /* テキストノードが複数 → 触らない */
+          found = n;
+        }}
+      }}
+      return found;
+    }}
+    function animCount(el, node, num, fmt, dur) {{
+      var step = 0, tot = 50, last = node.nodeValue;
       el.setAttribute('data-alk-ct', '1');
       var t = setInterval(function() {{
-        if (el.innerText !== last) {{
+        if (node.nodeValue !== last) {{
           /* Streamlit側が値を更新した → 中断して新しい値を尊重 */
           clearInterval(t);
           el.removeAttribute('data-alk-ct');
@@ -862,16 +876,18 @@ def inject_animations():
         }}
         step++;
         last = fmt(num * step / tot);
-        el.innerText = last;
+        node.nodeValue = last;
         if (step >= tot) {{
           last = fmt(num);
-          el.innerText = last;
+          node.nodeValue = last;
           clearInterval(t);
         }}
       }}, (dur || 900) / tot);
     }}
     function countUp(el) {{
-      var raw = (el.innerText || '').trim();
+      var node = _soleTextNode(el);
+      if (!node) return;
+      var raw = (node.nodeValue || '').trim();
 
       /* ── "X / Y 単位" 比率パターン（"6 / 5", "160 / 192 件" など） ── */
       if (raw.indexOf(' / ') >= 0) {{
@@ -879,7 +895,7 @@ def inject_animations():
         var xNum = parseFloat(parts[0].replace(/[,\\s]/g, ''));
         if (!isNaN(xNum) && xNum >= 0) {{
           var tail = ' / ' + parts.slice(1).join(' / ');
-          animCount(el, xNum, function(v) {{ return Math.round(v).toLocaleString() + tail; }}, 700);
+          animCount(el, node, xNum, function(v) {{ return Math.round(v).toLocaleString() + tail; }}, 700);
         }}
         return;  /* 解析できなければスキップ */
       }}
@@ -901,7 +917,7 @@ def inject_animations():
           : (dec > 0 ? v.toFixed(dec) : String(Math.round(v)));
         return s + sfx;
       }};
-      animCount(el, num, fmt, 900);
+      animCount(el, node, num, fmt, 900);
     }}
     function runCountUp() {{
       doc.querySelectorAll('[data-testid="stMetricValue"]:not([data-alk-ct])').forEach(countUp);
